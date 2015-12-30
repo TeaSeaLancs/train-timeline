@@ -1,0 +1,22 @@
+{
+  "name": "train-timeline",
+  "version": "1.0.0",
+  "description": "Add daily train commute information to the Pebble timeline",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TeaSeaLancs/train-timeline.git"
+  },
+  "author": "Matt Harker",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TeaSeaLancs/train-timeline/issues"
+  },
+  "homepage": "https://github.com/TeaSeaLancs/train-timeline#readme",
+  "dependencies": {
+    "stompjs": "^2.3.3"
+  }
+}
