@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/TeaSeaLancs/train-timeline#readme",
   "dependencies": {
-    "stompjs": "^2.3.3"
+    "libxmljs": "^0.16.1",
+    "soap": "^0.11.1",
+    "stompjs": "git+https://github.com/TeaSeaLancs/stomp-websocket"
   }
 }

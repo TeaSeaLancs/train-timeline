@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema targetNamespace="http://thalesgroup.com/RTTI/2010-11-01/ldb/commontypes" xmlns:tns="http://thalesgroup.com/RTTI/2010-11-01/ldb/commontypes" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" id="RTTI_2010-11-01_ldb_common_types">
+  <!-- Complex types -->
+  <xs:complexType name="AccessToken">
+    <xs:sequence>
+      <xs:element minOccurs="1" maxOccurs="1" name="TokenValue" type="xs:string" />
+    </xs:sequence>
+  </xs:complexType>
+  <!-- Elements -->
+  <xs:element name="AccessToken" type="tns:AccessToken" />
+</xs:schema>
