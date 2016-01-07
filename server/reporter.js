@@ -20,7 +20,7 @@ Reporter.prototype.update = function update() {
 };
 
 Reporter.prototype.finish = function finish() {
-    this.stream.writeln();
+    this.stream.write("\n");
 };
 
 module.exports = Reporter;
