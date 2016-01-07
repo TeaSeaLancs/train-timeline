@@ -46,7 +46,11 @@ client.connect('d3user', 'd3password', function () {
     console.log("Connected");
     client.subscribe('D3584a5b39-fd62-4d0e-8114-a856772b1037', function (message) {
         zlib.gunzip(message.body, function (err, body) {
-            console.log(body.toString("UTF-8"));
+            if (err) {
+                console.log(err);
+            } else {
+                console.log(body.toString("UTF-8"));
+            }
         });
     });
 });

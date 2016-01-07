@@ -19,6 +19,7 @@
   "dependencies": {
     "libxmljs": "^0.16.1",
     "soap": "^0.11.1",
-    "stompjs": "git+https://github.com/TeaSeaLancs/stomp-websocket"
+    "stompjs": "git+https://github.com/TeaSeaLancs/stomp-websocket#binary-data-support",
+    "underscore": "^1.8.3"
   }
 }
