@@ -1,0 +1,7 @@
+{
+  "name": "train-timeline",
+  "description": "Synchronise UK train commute information into your Pebble timeline",
+  "repository": "https://github.com/TeaSeaLancs/train-timeline",
+  "keywords": ["node", "pebble", "train", "commute"],
+  "image": "heroku/nodejs"
+}
