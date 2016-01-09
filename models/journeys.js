@@ -35,15 +35,11 @@ function queryForJourneys(from, to, around, mongo) {
         .then((results) => results.filter(directionFilter));
 }
 
-function findJourneys(from, to, around) {
+function find(from, to, around) {
     return mongodb.connect()
-        .then(queryForJourneys.bind(undefined, from, to, around))
-        .then((result) => {
-            mongodb.disconnect();
-            return result;
-        });
+        .then(queryForJourneys.bind(undefined, from, to, around));
 }
 
 module.exports = {
-    findJourneys
+    find
 };
