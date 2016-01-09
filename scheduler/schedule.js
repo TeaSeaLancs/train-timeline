@@ -1,7 +1,7 @@
 "use strict";
 
 const moment = require("moment");
-const Reporter = require("./reporter");
+const Reporter = require("../util/reporter");
 
 const findOptions = {
     'ns': 'http://www.thalesgroup.com/rtti/XmlTimetable/v8'
@@ -20,10 +20,10 @@ const passengerServiceCodes = {
 };
     
 function parseTime(date, time) {
-    return moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm');
+    return moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm').toDate();
 }
 
-function parseStop(journey, xStop) {
+function parseStop(journey, xStop, idx) {
     const station = xStop.attr("tpl").value();
     
     let predictedTime = (xStop.attr("ptd") || xStop.attr("pta"));
@@ -41,6 +41,7 @@ function parseStop(journey, xStop) {
     workingTime = parseTime(journey.ssd, workingTime.value());
     
     journey.stops[station] = {
+        idx,
         station,
         predictedTime,
         workingTime
@@ -78,7 +79,7 @@ function parseJourney(reporter, schedule, xJourney) {
 
 function parse(xSchedule) {
     const scheduleID = xSchedule.root().attr("timetableID").value();
-    const date = moment(scheduleID, "YYYYMMDDHHmmss");
+    const date = moment(scheduleID, "YYYYMMDDHHmmss").toDate();
     
     const schedule = {
         scheduleID,
