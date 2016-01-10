@@ -18,41 +18,76 @@ const passengerServiceCodes = {
     XX: 'XX',
     XZ: 'XZ'
 };
-    
+
 function parseTime(date, time) {
     return moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm').toDate();
 }
 
+function getTime(xStop, ssd, prefix) {
+    let time = (xStop.attr(`${prefix}d`) || xStop.attr(`${prefix}a`));
+    if (!time) {
+        return null;
+    }
+
+    return parseTime(ssd, time);
+}
+
+function getPredictedTime(xStop, ssd) {
+    return getTime(xStop, ssd, 'pt');
+}
+
+function getWorkingTime(xStop, ssd) {
+    return getTime(xStop, ssd, 'wt');
+}
+
+function getAttr(el, name) {
+    const attr = el.attr(name);
+    return (attr && attr.value()) || null;
+}
+
+function getTimes(xStop) {
+    return ['pta', 'wta', 'ptd', 'wtd'].reduce((results, attr) => {
+        const val = getAttr(xStop, attr);
+        if (val) {
+            results[attr] = val;
+        }
+        
+        return results;
+    }, {});
+}
+
 function parseStop(journey, xStop, idx) {
     const station = xStop.attr("tpl").value();
-    
-    let predictedTime = (xStop.attr("ptd") || xStop.attr("pta"));
-    let workingTime = (xStop.attr("wtd") || xStop.attr("wta"));
-    
-    if (!predictedTime || !workingTime) {
+
+    const predictedTime = getPredictedTime(xStop, journey.ssd);
+    const actualTime = getWorkingTime(xStop, journey.ssd);
+
+    const times = getTimes(xStop);
+
+    if (!predictedTime || !actualTime) {
         throw new Error({
             message: 'Could not find predicted and working time!',
             journey,
             xStop
         });
     }
-    
-    predictedTime = parseTime(journey.ssd, predictedTime.value());
-    workingTime = parseTime(journey.ssd, workingTime.value());
-    
-    journey.stops[station] = {
+
+    const forStation = journey.stops[station] || (journey.stops[station] = []);
+
+    forStation.push({
         idx,
         station,
         predictedTime,
-        workingTime
-    };
-    
+        actualTime,
+        times
+    });
+
     return journey;
 }
 
 function parseJourney(reporter, schedule, xJourney) {
     const trainCat = xJourney.attr("trainCat");
-    
+
     if (trainCat && !(trainCat.value() in passengerServiceCodes)) {
         schedule.skipped += 1;
     } else {
@@ -66,42 +101,44 @@ function parseJourney(reporter, schedule, xJourney) {
             ssd,
             stops: {}
         };
-        
+
         xJourney.find("ns:OR | ns:IP | ns:DT", findOptions).reduce(parseStop, journey);
-        
+
         schedule.journeys.push(journey);
     }
-    
+
     reporter.update();
-    
+
     return schedule;
 }
 
 function parse(xSchedule) {
     const scheduleID = xSchedule.root().attr("timetableID").value();
     const date = moment(scheduleID, "YYYYMMDDHHmmss").toDate();
-    
+
     const schedule = {
         scheduleID,
         date,
         journeys: [],
-        skipped: 0
+            skipped: 0
     };
-    
+
     const xJourneys = xSchedule.find('ns:Journey', findOptions);
-    
+
     const reporter = new Reporter(() => {
-       return `Parsed ${schedule.journeys.length + schedule.skipped} of ${xJourneys.length} (Skipped ${schedule.skipped})`; 
+        return `Parsed ${schedule.journeys.length + schedule.skipped} of ${xJourneys.length} (Skipped ${schedule.skipped})`;
     });
-    
+
     xJourneys.reduce(parseJourney.bind(undefined, reporter), schedule);
-    
+
     reporter.finish();
-    
+
     return schedule;
 }
 
 module.exports = {
     parse,
-    findOptions
+    findOptions,
+    parseTime,
+    getTimes
 };

@@ -9,7 +9,7 @@ const randomEntries = {
 };
 
 const ok = {
-    tinyIcon: Timeline.Pin.Icon.TIMELINE_SUN,
+    tinyIcon: Timeline.Pin.Icon.MUSIC_EVENT,
     backgroundColor: '#81C784',
     subtitle: [
         "Nothing to report",
@@ -29,21 +29,43 @@ const warning = {
     subtitle: [
         "Things are a bit delayed",
         "Few delays on the line",
-        "Delays delays delays"
+        "Trains are running slowly"
     ],
     body: [
         "Be prepared for commuters tutting",
         "Probably not worth running for that next train",
-        ""
+        "The concept of 'on time' is relative anyway, surely?"
     ]
 };
 
 const buggered = {
-
+    tinyIcon: Timeline.Pin.Icon.NOTIFICATION_FLAG,
+    backgroundColor: '#B71C1C',
+    subtitle: [
+        "All hell has broken loose",
+        "Nope",
+        "Delays, delays everywhere"
+    ],
+    body: [
+        "Now is a great time to tweet your disappointment",
+        "Well i'm not surprised, really",
+        "This is why this app was developed"
+    ]
 };
 
 const failure = {
-
+    tinyIcon: Timeline.Pin.Icon.NOTIFICATION_LIGHTHOUSE,
+    backgroundColor: '#EDE7F6',
+    subtitle: [
+        "Uh, dunno",
+        "There's been a problem",
+        "Your guess is as good as mine"
+    ],
+    body: [
+        "The system seems to be down. Sorry",
+        "The data feeds have stopped for some reason, sorry!",
+        "The spirit is willing Captain, but we just don't have the data!"
+    ]
 };
 
 const map = {

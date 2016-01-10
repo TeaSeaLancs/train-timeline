@@ -3,7 +3,6 @@
 const Client = require('ftp');
 const zlib = require('zlib');
 const filesize = require('filesize');
-var fs = require('fs');
 
 const config = require('../util/config');
 const Reporter = require('../util/reporter');
@@ -63,20 +62,6 @@ Connection.prototype.getSchedule = function (scheduleName) {
 
                 stream.pipe(gunzip);
             }
-        });
-    });
-};
-
-Connection.prototype.dumpSchedule = function (scheduleName, filename) {
-    return this.getSchedule(scheduleName).then(function(schedule) {
-        return new Promise(function(resolve, reject) {
-            fs.writeFile(filename, schedule, function(err) {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
         });
     });
 };

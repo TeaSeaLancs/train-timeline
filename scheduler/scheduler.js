@@ -3,7 +3,7 @@
 const xmljs = require('libxmljs');
 const fs = require('fs');
 
-const Schedule = require('./parser');
+const Schedule = require('../util/schedule-parser');
 
 function read(path) {
     return new Promise(function (resolve, reject) {

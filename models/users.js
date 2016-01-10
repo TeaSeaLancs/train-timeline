@@ -8,27 +8,37 @@ const mongodb = require('../util/mongodb');
 const emitter = new EventEmitter();
 
 function find(userID) {
-    return mongodb.connect().then((db) => {
+    return mongodb.connect().then(db => {
         return db.collection('users').findOne({
             _id: userID
         });
     });
 }
 
-function upsert(user) {
-    return mongodb.connect().then((db) => {
+function findForJourney(uid) {
+    const outQuery = {}, returnQuery = {};
+    outQuery[`out.journeys.${uid}`] = {$exists: true};
+    returnQuery[`return.journeys.${uid}`] = {$exists: true};
+    return mongodb.connect().then(db => db.collection('users').findOne({$or: [outQuery,returnQuery]}));
+}
+
+function upsert(user, oldUser) {
+    return mongodb.connect().then(db => {
         const query = {_id: user._id};
         return db.collection('users').update(query, user, {
             upsert: true
         }).then(() => {
             emitter.emit('insert', user);
+            if (oldUser) {
+                emitter.emit('upsert', user, oldUser);
+            }
             return user;
         });
     });
 }
 
 function update(user) {
-    return mongodb.connect().then((db) => {
+    return mongodb.connect().then(db => {
         const query = {_id: user._id};
         return db.collection('users').update(query, user, {
             upsert: false
@@ -40,9 +50,18 @@ function update(user) {
 }
 
 function getAll() {
-    return mongodb.connect().then((db) => {
-        return db.collection('users').find();
-    });
+    return mongodb.connect()
+        .then(db => db.collection('users').find().toArray());
+}
+
+const DEFAULT_DAYS = [1,2,3,4,5];
+
+function parseDays(dayParam) {
+    if (dayParam) {
+        return dayParam.split(",").map(day => +day);
+    }
+    
+    return DEFAULT_DAYS;
 }
 
 function fromParams(params) {
@@ -52,7 +71,8 @@ function fromParams(params) {
             home: params.home,
             work: params.work,
             outTime: params.out_time,
-            returnTime: params.return_time
+            returnTime: params.return_time,
+            days: parseDays(params.days)
         }
     };
 }
@@ -69,6 +89,7 @@ function on(event, cb) {
 
 module.exports = {
     find,
+    findForJourney,
     upsert,
     update,
     getAll,

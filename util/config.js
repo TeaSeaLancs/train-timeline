@@ -5,7 +5,7 @@ const vars = ['MONGOLAB_URL',
               'FTP_PASSWORD', 
               'STOMP_QUEUE', 
               'STOMP_USER', 
-              'STOMP_PASS'];
+              'STOMP_PASSWORD'];
 
 module.exports = vars.reduce((config, variable) => {
     const val = process.env[variable];

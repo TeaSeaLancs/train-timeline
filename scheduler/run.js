@@ -1,8 +1,15 @@
 "use strict";
 
+const fs = require('fs');
+
 const ftp = require('./nr-ftp');
 const mongodb = require('../util/mongodb');
 const scheduler = require('./scheduler');
+
+const Journeys = require('../models/journeys');
+const Users = require('../models/users');
+
+const sync = require('../sync/sync');
 
 // Internal functions for sorting out everything
 function x(fn) {
@@ -23,37 +30,16 @@ function parseSchedule(schedule) {
     return scheduler.parse(schedule);
 }
 
-function insertSchedule(mongo, schedule) {
-    return mongo.collection('journeys').insertMany(schedule.journeys);
+function insertSchedule(schedule) {
+    return Journeys.insert(schedule.journeys);
 }
 
-// Callable functions
-function insertFromFile(filename) {
-    mongodb.connect().then((mongo) => {
-        return scheduler.load(filename)
-            .then((schedule) => {
-                return insertSchedule(mongo, schedule);
-            }).then(() => {
-                mongodb.disconnect();
-            });
-    }).catch((err) => {
-        console.error(err);
-        mongodb.disconnect();
-    });
-}
+function updateUsers() {
+    console.log("Updating users");
 
-function dumpSchedule(filename) {
-    ftp.connect().then((ftp) => {
-        return findSchedule(ftp)
-            .then((scheduleName) => {
-                return ftp.dumpSchedule(scheduleName, filename);
-            })
-            .then(() => {
-                ftp.disconnect();
-            });
-    }).catch((err) => {
-        console.error(err);
-        ftp.disconnect();
+    return Users.getAll().then(users => {
+        return Promise.all(users.map(user => sync.populate(user)))
+            .then(() => console.log("Updated users"));
     });
 }
 
@@ -62,47 +48,83 @@ function clearJourneys(mongo) {
     return mongo.collection('journeys').remove({});
 }
 
-function clear() {
-    console.log("Connecting to MongoDB");
-    mongodb.connect().then((mongo) => {
-        return clearJourneys(mongo).then(() => {
-            mongodb.disconnect();
+function dump(schedule, filename) {
+    return new Promise(function (resolve, reject) {
+        fs.writeFile(filename, schedule, function (err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
         });
-    }).catch((err) => {
-        console.error(err);
-        mongodb.disconnect();
     });
 }
 
+function disconnect() {
+    mongodb.disconnect();
+    ftp.disconnect();
+}
+
+function handleError(err) {
+    console.error(err, err.stack);
+    disconnect();
+}
+
+// Callable functions
+function insertFromFile(filename) {
+    mongodb.connect().then(() => {
+        return scheduler.load(filename)
+            .then(schedule => insertSchedule(schedule))
+            .then(disconnect);
+    }).catch(handleError);
+}
+
+function dumpSchedule(filename) {
+    ftp.connect().then((ftp) => {
+        return findSchedule(ftp)
+            .then(scheduleName => ftp.getSchedule(scheduleName))
+            .then(schedule => dump(schedule, filename))
+            .then(disconnect);
+    }).catch(handleError);
+}
+
+function clear() {
+    console.log("Connecting to MongoDB");
+    mongodb.connect().then((mongo) => {
+        return clearJourneys(mongo).then(disconnect);
+    }).catch(handleError);
+}
+
 function update() {
+    // We don't reference mongodb's returned connection, but we want to make sure we can connect
+    // before we continue
     Promise.all([ftp.connect(), mongodb.connect()])
-        .then(x((ftp, mongo) => {
+        .then(x((ftp) => {
             return findSchedule(ftp)
-                .then(getSchedule.bind(undefined, ftp))
+                .then(getSchedule.bind(null, ftp))
                 .then(parseSchedule)
-                .then(insertSchedule.bind(undefined, mongo))
-                .then(function () {
-                    ftp.disconnect();
-                    mongodb.disconnect();
-                });
+                .then(insertSchedule)
+                .then(updateUsers)
+                .then(disconnect);
         }))
-        .catch((err) => {
-            console.error(err);
-            ftp.disconnect();
-            mongodb.disconnect();
-        });
+        .catch(handleError);
+}
+
+function doSync() {
+    updateUsers().then(disconnect)
+        .catch(handleError);
 }
 
 const args = process.argv.slice(2);
 let processed = false;
 
 function getArgValue(arg, name) {
-    const val = arg.substring(name.length+1);
+    const val = arg.substring(name.length + 1);
     if (!val) {
         console.error(`You need to supply a value for ${name}`);
         process.exit(1);
     }
-    
+
     return val;
 }
 
@@ -110,6 +132,9 @@ args.forEach((arg) => {
     if (arg === '--clear') {
         processed = true;
         clear();
+    } else if (arg === '--sync') {
+        processed = true;
+        doSync();
     } else if (arg.startsWith("--file")) {
         processed = true;
         insertFromFile(getArgValue(arg, '--file'));

@@ -15,7 +15,7 @@ function checkTime() {
 }
 
 function registerUser(req, res) {
-    Common.getParams(req, 'userID', 'home', 'work', 'out_time', 'return_time')
+    Common.getParams(req, 'userID', 'home', 'work', 'out_time', 'return_time', 'days?')
         .then((params) => {
             checkTime(params.out_time, params.return_time);
             return Users.find(params.userID)
@@ -30,7 +30,7 @@ function registerUser(req, res) {
 function createOrUpdate(passedUser, existingUser) {
     if (!existingUser || !Users.areEqual(passedUser, existingUser)) {
         console.log("Upserting user", passedUser);
-        return Users.upsert(passedUser);
+        return Users.upsert(passedUser, existingUser);
     }
     
     console.log("Nothing to be updated for ", passedUser);

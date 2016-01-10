@@ -31,7 +31,13 @@ function getParams(req) {
     
     return Promise.resolve(req).then(function(req) {
         return params.reduce((result, param) => {
-            if (!req.query[param]) {
+            let optional = false;
+            
+            if (param.endsWith("?")) {
+                param = param.substring(0, param.length-1);
+                optional = true;
+            }
+            if (!req.query[param] && !optional) {
                 throw new BadRequest(`Missing ${param} parameter`);
             }
             result[param] = req.query[param];
