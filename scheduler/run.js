@@ -1,8 +1,8 @@
 "use strict";
 
 const fs = require('fs');
-const filesize = require('filesize');
 const _ = require('underscore');
+const filesize = require('filesize');
 
 const ftp = require('./nr-ftp');
 const mongodb = require('../util/mongodb');
@@ -12,6 +12,8 @@ const Journeys = require('../models/journeys');
 const Users = require('../models/users');
 
 const sync = require('../sync/sync');
+
+const debug = require('../util/debug');
 
 // Internal functions for sorting out everything
 function x(fn) {
@@ -24,16 +26,54 @@ function findSchedule(ftp) {
     return ftp.findSchedule();
 }
 
-function getSchedule(ftp, scheduleName) {
-    return ftp.getSchedule(scheduleName);
+function getSchedule(scheduleName, ftp) {
+    return ftp.getSchedule(scheduleName)
+        .then(schedule => dumpSchedule(schedule, scheduleName));
 }
 
-function parseSchedule(schedule) {
-    return scheduler.parse(schedule);
+function dumpSchedule(schedule, filename) {
+    return new Promise(function (resolve, reject) {
+        fs.writeFile(filename, schedule, function (err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(filename);
+            }
+        });
+    });
 }
 
-function insertSchedule(schedule) {
-    return Journeys.insert(schedule.journeys);
+function logParseProgress(message) {
+    if (debug.on()) {
+        const memoryUsage = _.mapObject(process.memoryUsage(), val => filesize(val));
+        debug(`Memory usage (${message})`, memoryUsage);
+    } else {
+        console.log(message);
+    }
+}
+
+function parseSchedule(fileName) {
+    
+    const batchSaveRequests = [];
+    
+    let count = 0;
+    
+    function saveBatch(batch) {
+        const insertRequest = Journeys.insert(batch)
+            .then(() => Promise.resolve())
+            .catch(err => {
+                console.log(err);
+                return Promise.reject(err);
+            });
+        
+        batchSaveRequests.push(insertRequest);
+        count += batch.length;
+        logParseProgress(`Parsed ${count} journeys`);
+    }
+    
+    return scheduler.parse(fileName, saveBatch)
+        .then(() => Promise.all(_.values(batchSaveRequests)))
+        .then(() => true);
 }
 
 function updateUsers() {
@@ -50,18 +90,6 @@ function clearJourneys(mongo) {
     return mongo.collection('journeys').remove({});
 }
 
-function dump(schedule, filename) {
-    return new Promise(function (resolve, reject) {
-        fs.writeFile(filename, schedule, function (err) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
-}
-
 function disconnect() {
     mongodb.disconnect();
     ftp.disconnect();
@@ -72,60 +100,55 @@ function handleError(err) {
     disconnect();
 }
 
+ function update() {
+        // We don't reference mongodb's returned connection, but we want to make sure we can connect
+        // before we continue
+        Promise.all([ftp.connect(), mongodb.connect()])
+            .then(x((ftp) => {
+                return findSchedule(ftp)
+                    .then(scheduleName => getSchedule(scheduleName, ftp))
+                    .then(fileName => parseSchedule(fileName))
+                    .then(updateUsers)
+                    .then(disconnect);
+            }))
+            .catch(handleError);
+    }
+
 // Callable functions
-function insertFromFile(filename) {
-    mongodb.connect().then(() => {
-        return scheduler.load(filename)
-            .then(schedule => insertSchedule(schedule))
-            .then(disconnect);
-    }).catch(handleError);
-}
-
-function dumpSchedule(filename) {
-    ftp.connect().then((ftp) => {
-        return findSchedule(ftp)
-            .then(scheduleName => ftp.getSchedule(scheduleName))
-            .then(schedule => dump(schedule, filename))
-            .then(disconnect);
-    }).catch(handleError);
-}
-
-function clear() {
-    mongodb.connect().then((mongo) => {
-        return clearJourneys(mongo).then(disconnect);
-    }).catch(handleError);
-}
-
-function update() {
-    // We don't reference mongodb's returned connection, but we want to make sure we can connect
-    // before we continue
-    Promise.all([ftp.connect(), mongodb.connect()])
-        .then(x((ftp) => {
-            return findSchedule(ftp)
-                .then(getSchedule.bind(null, ftp))
-                .then(parseSchedule)
-                .then(insertSchedule)
-                .then(updateUsers)
+/*
+const callable = {
+    function insertFromFile(filename) {
+        mongodb.connect().then(() => {
+            return scheduler.load(filename)
+                .then(schedule => insertSchedule(schedule))
                 .then(disconnect);
-        }))
-        .catch(handleError);
-}
+        }).catch(handleError);
+    }
 
-function doSync() {
-    updateUsers().then(disconnect)
-        .catch(handleError);
-}
+    function dumpSchedule(filename) {
+        ftp.connect().then((ftp) => {
+            return findSchedule(ftp)
+                .then(scheduleName => ftp.getSchedule(scheduleName))
+                .then(schedule => dump(schedule, filename))
+                .then(disconnect);
+        }).catch(handleError);
+    }
 
-function logMemoryUsage(message, passthrough) {
-    const memoryUsage = _.mapObject(process.memoryUsage(), val => filesize(val));
-    
-    console.log(`Memory usage (${message})`, memoryUsage);
-    return passthrough;
-}
+    function clear() {
+        mongodb.connect().then((mongo) => {
+            return clearJourneys(mongo).then(disconnect);
+        }).catch(handleError);
+    }
 
-function streamXML(filename) {
-    return scheduler.streamXML(filename)
-        .catch(handleError);
+    function doSync() {
+        updateUsers().then(disconnect)
+            .catch(handleError);
+    }
+
+    function parse(filename) {
+        parseSchedule(filename)
+            .catch(handleError);
+    }
 }
 
 const args = process.argv.slice(2);
@@ -148,9 +171,9 @@ args.forEach((arg) => {
     } else if (arg === '--sync') {
         processed = true;
         doSync();
-    } else if (arg.startsWith('--streamXML')) {
+    } else if (arg.startsWith('--parse')) {
         processed = true;
-        streamXML(getArgValue(arg, '--streamXML'));
+        parse(getArgValue(arg, '--parse'));
     } else if (arg.startsWith("--file")) {
         processed = true;
         insertFromFile(getArgValue(arg, '--file'));
@@ -158,7 +181,9 @@ args.forEach((arg) => {
         processed = true;
         dumpSchedule(getArgValue(arg, '--dump'));
     }
-});
+});*/
+
+const processed = false;
 
 if (!processed) {
     update();

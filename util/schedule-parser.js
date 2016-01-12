@@ -1,7 +1,6 @@
 "use strict";
 
 const moment = require("moment");
-const Reporter = require("../util/reporter");
 
 const findOptions = {
     'ns': 'http://www.thalesgroup.com/rtti/XmlTimetable/v8'
@@ -19,12 +18,18 @@ const passengerServiceCodes = {
     XZ: 'XZ'
 };
 
+const validStopTags = {
+    OR: 'OR',
+    IP: 'IP',
+    DT: 'DT'
+};
+
 function parseTime(date, time) {
     return moment(`${date} ${time}`, 'YYYY-MM-DD HH:mm').toDate();
 }
 
-function getTime(xStop, ssd, prefix) {
-    let time = (xStop.attr(`${prefix}d`) || xStop.attr(`${prefix}a`));
+function getTime(sourceStop, ssd, prefix) {
+    let time = (sourceStop.attrs[`${prefix}d`] || sourceStop.attrs[`${prefix}a`]);
     if (!time) {
         return null;
     }
@@ -32,69 +37,34 @@ function getTime(xStop, ssd, prefix) {
     return parseTime(ssd, time);
 }
 
-function getPredictedTime(xStop, ssd) {
-    return getTime(xStop, ssd, 'pt');
-}
-
-function getWorkingTime(xStop, ssd) {
-    return getTime(xStop, ssd, 'wt');
-}
-
-function getAttr(el, name) {
-    const attr = el.attr(name);
-    return (attr && attr.value()) || null;
-}
-
-function getTimes(xStop) {
+function getTimes(sourceStop) {
     return ['pta', 'wta', 'ptd', 'wtd'].reduce((results, attr) => {
-        const val = getAttr(xStop, attr);
+        const val = sourceStop.attrs[attr];
         if (val) {
             results[attr] = val;
         }
-        
+
         return results;
     }, {});
 }
 
-function parseStop(journey, xStop, idx) {
-    const station = xStop.attr("tpl").value();
-
-    const predictedTime = getPredictedTime(xStop, journey.ssd);
-    const actualTime = getWorkingTime(xStop, journey.ssd);
-
-    const times = getTimes(xStop);
-
-    if (!predictedTime || !actualTime) {
-        throw new Error({
-            message: 'Could not find predicted and working time!',
-            journey,
-            xStop
-        });
-    }
-
-    const forStation = journey.stops[station] || (journey.stops[station] = []);
-
-    forStation.push({
-        idx,
-        station,
-        predictedTime,
-        actualTime,
-        times,
-        delayed: false
-    });
-
-    return journey;
+function getPredictedTime(sourceStop, ssd) {
+    return getTime(sourceStop, ssd, 'pt');
 }
 
-function parseJourney(reporter, schedule, xJourney) {
-    const trainCat = xJourney.attr("trainCat");
+function getWorkingTime(sourceStop, ssd) {
+    return getTime(sourceStop, ssd, 'wt');
+}
 
-    if (trainCat && !(trainCat.value() in passengerServiceCodes)) {
-        schedule.skipped += 1;
+function parseJourney(sourceJourney) {
+    const trainCat = sourceJourney.attrs.trainCat;
+
+    if (trainCat && !(trainCat in passengerServiceCodes)) {
+        return null;
     } else {
-        const uid = xJourney.attr("uid").value();
-        const trainID = xJourney.attr("trainId").value();
-        const ssd = xJourney.attr("ssd").value();
+        const uid = sourceJourney.attrs.uid;
+        const trainID = sourceJourney.attrs.trainId;
+        const ssd = sourceJourney.attrs.ssd;
 
         const journey = {
             uid,
@@ -103,43 +73,45 @@ function parseJourney(reporter, schedule, xJourney) {
             stops: {}
         };
 
-        xJourney.find("ns:OR | ns:IP | ns:DT", findOptions).reduce(parseStop, journey);
-
-        schedule.journeys.push(journey);
+        sourceJourney.children.reduce(parseStop, journey);
+        return journey;
     }
-
-    reporter.update();
-
-    return schedule;
 }
 
-function parse(xSchedule) {
-    const scheduleID = xSchedule.root().attr("timetableID").value();
-    const date = moment(scheduleID, "YYYYMMDDHHmmss").toDate();
+function parseStop(journey, sourceStop, idx) {
+    if (sourceStop.tag in validStopTags) {
+        const station = sourceStop.attrs.tpl;
 
-    const schedule = {
-        scheduleID,
-        date,
-        journeys: [],
-            skipped: 0
-    };
+        const predictedTime = getPredictedTime(sourceStop, journey.ssd);
+        const actualTime = getWorkingTime(sourceStop, journey.ssd);
 
-    const xJourneys = xSchedule.find('ns:Journey', findOptions);
+        const times = getTimes(sourceStop);
 
-    const reporter = new Reporter(() => {
-        return `Parsed ${schedule.journeys.length + schedule.skipped} of ${xJourneys.length} (Skipped ${schedule.skipped})`;
-    });
+        if (!predictedTime || !actualTime) {
+            throw new Error({
+                message: 'Could not find predicted and working time!',
+                journey,
+                sourceStop
+            });
+        }
 
-    xJourneys.reduce(parseJourney.bind(undefined, reporter), schedule);
+        const forStation = journey.stops[station] || (journey.stops[station] = []);
 
-    reporter.finish();
+        forStation.push({
+            idx,
+            station,
+            predictedTime,
+            actualTime,
+            times,
+            delayed: false
+        });
+    }
 
-    return schedule;
+    return journey;
 }
 
 module.exports = {
-    parse,
+    parseJourney,
     findOptions,
-    parseTime,
-    getTimes
+    parseTime
 };

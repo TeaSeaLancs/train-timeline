@@ -4,6 +4,7 @@ const xmljs = require('libxmljs');
 
 const Stomp = require('../../util/stomp');
 const Schedule = require('../../util/schedule-parser');
+const XmlSchedule = require('../../util/xml-parser');
 const debug = require('../../util/debug');
 
 const Journeys = require('../../models/journeys');
@@ -70,7 +71,7 @@ function updateJourney(update, journey, uid, ssd) {
     let updated = false;
     const updates = update.find('ns3:Location', Stomp.pushPortNS).reduce((updates, location) => {
         const tpl = location.attr("tpl").value();
-        const times = Schedule.getTimes(location);
+        const times = XmlSchedule.getTimes(location);
 
         const found = getStop(journey.stops[tpl], times);
 
