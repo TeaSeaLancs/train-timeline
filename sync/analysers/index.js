@@ -1,15 +1,10 @@
 "use strict";
 
 const analysers = [
-    require('./rolling-delays')
+    require('./delay-count')
 ];
 
-const states = {
-    ok: 'ok',
-    warning: 'warning',
-    buggered: 'buggered',
-    failure: 'failure'
-};
+const states = require('./states');
 
 function analyse(journey) {
     return analysers.map(analyser => analyser(journey));
