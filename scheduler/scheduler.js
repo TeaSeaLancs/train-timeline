@@ -24,7 +24,9 @@ function removeAll(document, type) {
 }
 
 function parse(data) {
+    console.log("Scheduler: Parsing schedule XML");
     const document = xmljs.parseXml(data);
+    console.log("Scheduler: Parsed schedule XML");
     removeAll(document, 'PP');
     removeAll(document, 'OPIP');
     removeAll(document, 'Association');
