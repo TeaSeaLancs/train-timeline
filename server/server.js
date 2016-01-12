@@ -7,7 +7,7 @@ app.set('port', (process.env.PORT || 5000));
 app.use(express.static('web'));
 
 require('./listeners')();
-require('./feeds')();
+//require('./feeds')();
 require('./routers')(app);
 
 app.listen(app.get('port'), function() {
