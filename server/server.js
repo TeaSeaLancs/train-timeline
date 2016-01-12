@@ -6,10 +6,10 @@ const app = express();
 app.set('port', (process.env.PORT || 5000));
 app.use(express.static('web'));
 
-require('./listeners/all')();
-require('./feeds/all')();
-require('./routers/all')(app);
+require('./listeners')();
+require('./feeds')();
+require('./routers')(app);
 
 app.listen(app.get('port'), function() {
-   console.log(`Started server on ${app.get('port')}`); 
+   console.log(`Server: Started server on ${app.get('port')}`); 
 });

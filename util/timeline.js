@@ -1,9 +1,10 @@
 "use strict";
 
+const _ = require('underscore');
 const Timeline = require('pebble-api').Timeline;
 
 const flavours = require('./pin-flavours');
-const _ = require('underscore');
+const debug = require('./debug');
 
 const timeline = new Timeline();
 
@@ -51,11 +52,13 @@ function generatePin(userJourney/*, oldStatus TODO IMPLEMENT*/) {
 function send(user, userJourney, oldStatus) {
     return new Promise(function (resolve, reject) {
         try {
+            debug(`Timeline: Sending pin to ${user.id} for ${userJourney.from} - ${userJourney.to}`);
             const pin = generatePin(userJourney, oldStatus);
             timeline.sendUserPin(user._id, pin, (err) => {
                 if (err) {
                     reject(err);
                 } else {
+                    debug(`Timeline: Sent pin`);
                     resolve();
                 }
             });

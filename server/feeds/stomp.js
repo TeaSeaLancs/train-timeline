@@ -17,6 +17,7 @@ function getStop(stops, times) {
             idx: 0
         };
     } else {
+        // Given multiple stops, we narrow down the stop by finding the one which matches the times provided
         let stop = null,
             idx = -1;
         stops.some((s, i) => {
@@ -55,7 +56,8 @@ function parsePrediction(journey) {
 
     return {
         arrival,
-        departure
+        departure,
+        delayed: !((arrival && arrival.delayed) || (departure && departure.delayed))
     };
 }
 
@@ -90,6 +92,7 @@ function updateJourney(update, journey, uid, ssd) {
                 if (predictionTime.getTime() !== stop.actualTime.getTime()) {
                     updated = true;
                     updates[`stops.${tpl}.${idx}.actualTime`] = predictionTime;
+                    updates[`stops.${tpl}.${idx}.delayed`] = prediction.delayed;
                 }
             }
         }
@@ -100,7 +103,7 @@ function updateJourney(update, journey, uid, ssd) {
     if (!updated) {
         return updated;
     } else {
-        return Journeys.update(journey.uid, journey.ssd, {$set: updates})
+        return Journeys.update(journey.uid, journey.ssd, updates)
             .then(() => {
                 debug(`Processed update for ${journey.uid} - ${journey.ssd}`);
                 return updated;

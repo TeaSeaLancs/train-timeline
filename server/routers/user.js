@@ -29,11 +29,11 @@ function registerUser(req, res) {
 
 function createOrUpdate(passedUser, existingUser) {
     if (!existingUser || !Users.areEqual(passedUser, existingUser)) {
-        console.log("Upserting user", passedUser);
+        console.log("/User: Upserting user", passedUser);
         return Users.upsert(passedUser, existingUser);
     }
     
-    console.log("Nothing to be updated for ", passedUser);
+    console.log("/User: Nothing to be updated for ", passedUser);
     return Promise.resolve();
 }
 

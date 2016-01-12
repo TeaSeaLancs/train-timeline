@@ -7,19 +7,21 @@ const Users = require('../models/users');
 
 const timeline = require('../util/timeline');
 
+const analyser = require('./analysers');
+
 function generateDate(time) {
     return moment(time, 'HH:mm').toDate();
 }
 
 function analyseSection(section) {
-    // TODO Actually do some damn analysis
+    const analyserResults = analyser.analyse(section);
+    // TODO Some damn analysis
+    
     const analysis = {
         changed: false,
         from: null,
-        to: null
+        to: analyser.states.ok
     };
-    
-    section.status = 'ok';
     
     return analysis;
 }
@@ -36,7 +38,8 @@ function reduce(journeys) {
         journeys[journey.uid] = {
             uid: journey.uid,
             predictedTime: journey.from.predictedTime,
-            actualTime: journey.from.actualTime
+            actualTime: journey.from.actualTime,
+            delayed: journey.from.delayed
         };
         
         return journeys;
@@ -99,14 +102,9 @@ function populate(user) {
 
 function updateSection(section, journey) {
     if (journey.uid in section.journeys) {
-        const station = section.from;
         const stripped = Journeys.stripJourney(journey, section.from, section.to);
         
         if (section.journeys[journey.uid].actualTime !== stripped.from.actualTime) {
-            console.log(`Updating user from ${section.from}`);
-            console.log(section.journeys[journey.uid]);
-            console.log(stripped.from);
-            
             section.journeys[journey.uid].actualTime = stripped.from.actualTime;
             section.updatedAt = new Date();
             return true;
@@ -122,7 +120,7 @@ function actOnAnalysis(user, analysis) {
         updates.push(timeline.send(user, user.out, analysis.out.from));
     }
     
-    if (analysis.in.changed) {
+    if (analysis.return.changed) {
         updates.push(timeline.send(user, user.in, analysis.in.from));
     }
     

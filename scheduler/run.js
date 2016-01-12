@@ -35,16 +35,16 @@ function insertSchedule(schedule) {
 }
 
 function updateUsers() {
-    console.log("Updating users");
+    console.log("Scheduler: Updating users");
 
     return Users.getAll().then(users => {
         return Promise.all(users.map(user => sync.populate(user)))
-            .then(() => console.log("Updated users"));
+            .then(() => console.log("Scheduler: Updated users"));
     });
 }
 
 function clearJourneys(mongo) {
-    console.log("Clearing journeys");
+    console.log("Scheduler: Clearing journeys");
     return mongo.collection('journeys').remove({});
 }
 
@@ -89,7 +89,6 @@ function dumpSchedule(filename) {
 }
 
 function clear() {
-    console.log("Connecting to MongoDB");
     mongodb.connect().then((mongo) => {
         return clearJourneys(mongo).then(disconnect);
     }).catch(handleError);

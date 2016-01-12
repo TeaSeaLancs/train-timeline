@@ -8,7 +8,7 @@ const sync = require('../../sync/sync');
 const debug = require('../../util/debug');
 
 function error(operation, journey, err) {
-    console.error(`Journey: Error performing ${operation} on ${journey.uid}`, err);
+    console.error(`Journey: Error performing ${operation} on ${journey.uid}`, err, err.stack);
 }
 
 function success(operation, journey) {

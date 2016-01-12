@@ -45,7 +45,7 @@ function getMessages(cb) {
         client.subscribe(config.stomp.queue, (message) => {
             zlib.gunzip(message.body, function (err, body) {
                 if (err) {
-                    console.log(err);
+                    console.log("Stomp: ", err);
                 }
                 
                 cb(body.toString("UTF-8"));

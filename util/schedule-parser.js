@@ -79,7 +79,8 @@ function parseStop(journey, xStop, idx) {
         station,
         predictedTime,
         actualTime,
-        times
+        times,
+        delayed: false
     });
 
     return journey;

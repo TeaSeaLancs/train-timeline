@@ -29,7 +29,7 @@ Connection.prototype.findSchedule = function () {
                 if (!schedule) {
                     reject(new Error("No schedule exists on servers, this is a big problem!"));
                 } else {
-                    console.log("New schedule is " + filesize(schedule.size));
+                    console.log("Scheduler: New schedule is " + filesize(schedule.size));
                     resolve(schedule.name);
                 }
             }
@@ -37,33 +37,49 @@ Connection.prototype.findSchedule = function () {
     });
 };
 
-Connection.prototype.getSchedule = function (scheduleName) {
+function downloadSchedule(connection, scheduleName) {
     return new Promise((resolve, reject) => {
-        this.connection.get(scheduleName, (err, stream) => {
+       connection.get(scheduleName, (err, stream) => {
+           if (err) {
+               reject(err);
+           } else {
+               let output = new Buffer(0);
+               
+               const reporter = new Reporter(() => {
+                   return `Downloaded ${filesize(output.length)}`;
+               });
+               
+               stream.on('data', data => {
+                   output = Buffer.concat([output, data]);
+                   reporter.update();
+               });
+               
+               stream.once('end', () => {
+                   reporter.finish();
+                   resolve(output);
+               });
+           }
+       });
+    });
+}
+
+function unzipSchedule(schedule) {
+    console.log("Scheduler: Unzipping schedule");
+    return new Promise((resolve, reject) => {
+        zlib.gunzip(schedule, (err, unzipped) => {
+            console.log("Scheduler: Unzipped schedule");
             if (err) {
                 reject(err);
             } else {
-                const gunzip = zlib.createGunzip();
-                let output = new Buffer(0);
-
-                const reporter = new Reporter(() => {
-                    return `Read ${filesize(output.length)}`;
-                });
-
-                gunzip.on('error', (err) => reject(err));
-                gunzip.on('data', (data) => {
-                    output = Buffer.concat([output, data]);
-                    reporter.update();
-                });
-                gunzip.once('end', () => {
-                    reporter.finish();
-                    resolve(output.toString("UTF-8"));
-                });
-
-                stream.pipe(gunzip);
+                resolve(unzipped.toString("UTF-8"));
             }
         });
     });
+}
+
+Connection.prototype.getSchedule = function (scheduleName) {
+    return downloadSchedule(this.connection, scheduleName)
+        .then(schedule => unzipSchedule(schedule));
 };
 
 Connection.prototype.disconnect = function () {

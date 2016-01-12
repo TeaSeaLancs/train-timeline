@@ -116,7 +116,10 @@ function findByID(uid, ssd) {
         }));
 }
 
-function update(uid, ssd, updateObj) {
+function update(uid, ssd, updates) {
+    
+    const updateObj = {$set: updates};
+    
     return mongodb.connect()
         .then((db) => db.collection('journeys').findOneAndUpdate({
             uid, ssd
