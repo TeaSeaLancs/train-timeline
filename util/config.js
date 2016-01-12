@@ -1,6 +1,6 @@
 "use strict";
 
-const vars = ['MONGOLAB_URL', 
+const vars = ['MONGOLAB_URI', 
               'FTP_USER', 
               'FTP_PASSWORD', 
               'STOMP_QUEUE', 
