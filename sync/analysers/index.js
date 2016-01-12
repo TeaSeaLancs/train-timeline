@@ -1,5 +1,9 @@
 "use strict";
 
+const analysers = [
+    require('./rolling-delays')
+];
+
 const states = {
     ok: 'ok',
     warning: 'warning',
@@ -8,10 +12,10 @@ const states = {
 };
 
 function analyse(journey) {
-    
+    return analysers.map(analyser => analyser(journey));
 }
 
 module.exports = {
     analyse,
     states
-}
+};

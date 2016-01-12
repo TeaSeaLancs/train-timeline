@@ -72,8 +72,8 @@ function queryForJourneys(from, to, around, db) {
 
     const mmt = moment(around);
 
-    const lowerBound = moment(mmt).subtract(30, 'minutes');
-    const upperBound = moment(mmt).add(30, 'minutes');
+    const lowerBound = moment(mmt).subtract(15, 'minutes');
+    const upperBound = moment(mmt).add(45, 'minutes');
 
     query[`stops.${from}`] = {
         $elemMatch: {
