@@ -1,6 +1,8 @@
 "use strict";
 
 const fs = require('fs');
+const filesize = require('filesize');
+const _ = require('underscore');
 
 const ftp = require('./nr-ftp');
 const mongodb = require('../util/mongodb');
@@ -114,6 +116,22 @@ function doSync() {
         .catch(handleError);
 }
 
+function logMemoryUsage(message, passthrough) {
+    const memoryUsage = _.mapObject(process.memoryUsage(), val => filesize(val));
+    
+    console.log(`Memory usage (${message})`, memoryUsage);
+    return passthrough;
+}
+
+function toXML(filename) {
+    logMemoryUsage('pre-load');
+    return scheduler.read(filename)
+        .then(file => logMemoryUsage('post-load', file))
+        .then(file => scheduler.toXML(file))
+        .then(() => logMemoryUsage('post-parse'))
+        .catch(handleError);
+}
+
 const args = process.argv.slice(2);
 let processed = false;
 
@@ -134,6 +152,9 @@ args.forEach((arg) => {
     } else if (arg === '--sync') {
         processed = true;
         doSync();
+    } else if (arg.startsWith('--toXML')) {
+        processed = true;
+        toXML(getArgValue(arg, '--toXML'));
     } else if (arg.startsWith("--file")) {
         processed = true;
         insertFromFile(getArgValue(arg, '--file'));

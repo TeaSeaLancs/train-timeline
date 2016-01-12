@@ -23,14 +23,16 @@ function removeAll(document, type) {
     });
 }
 
-function parse(data) {
-    console.log("Scheduler: Parsing schedule XML");
+function toXML(data) {
     const document = xmljs.parseXml(data);
-    console.log("Scheduler: Parsed schedule XML");
     removeAll(document, 'PP');
     removeAll(document, 'OPIP');
     removeAll(document, 'Association');
-    return Schedule.parse(document);
+    return document;
+}
+
+function parse(data) {
+    return Schedule.parse(toXML(data));
 }
 
 function load(path) {
@@ -39,5 +41,7 @@ function load(path) {
 
 module.exports = {
     parse,
-    load
+    load,
+    toXML,
+    read
 };
