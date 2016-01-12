@@ -10,7 +10,7 @@ function connect() {
         return Promise.resolve(singleton);
     } else {
         return new Promise(function(resolve, reject) {
-            const mongoURL = config.mongolab.url;
+            const mongoURL = config.mongolab.uri;
             MongoClient.connect(mongoURL, function(err, db) {
                if (err) {
                    reject(err);
