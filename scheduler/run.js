@@ -123,12 +123,8 @@ function logMemoryUsage(message, passthrough) {
     return passthrough;
 }
 
-function toXML(filename) {
-    logMemoryUsage('pre-load');
-    return scheduler.read(filename)
-        .then(file => logMemoryUsage('post-load', file))
-        .then(file => scheduler.toXML(file))
-        .then(() => logMemoryUsage('post-parse'))
+function streamXML(filename) {
+    return scheduler.streamXML(filename)
         .catch(handleError);
 }
 
@@ -152,9 +148,9 @@ args.forEach((arg) => {
     } else if (arg === '--sync') {
         processed = true;
         doSync();
-    } else if (arg.startsWith('--toXML')) {
+    } else if (arg.startsWith('--streamXML')) {
         processed = true;
-        toXML(getArgValue(arg, '--toXML'));
+        streamXML(getArgValue(arg, '--streamXML'));
     } else if (arg.startsWith("--file")) {
         processed = true;
         insertFromFile(getArgValue(arg, '--file'));

@@ -1,9 +1,11 @@
 "use strict";
 
-const xmljs = require('libxmljs');
 const fs = require('fs');
+const bigXml = require('big-xml');
 
 const Schedule = require('../util/schedule-parser');
+
+const ROOTS = /^Journey$/;
 
 function read(path) {
     return new Promise(function (resolve, reject) {
@@ -23,12 +25,12 @@ function removeAll(document, type) {
     });
 }
 
-function toXML(data) {
-    const document = xmljs.parseXml(data);
-    removeAll(document, 'PP');
-    removeAll(document, 'OPIP');
-    removeAll(document, 'Association');
-    return document;
+function streamXML(filename) {
+    return new Promise((resolve, reject) => {
+        const parser = bigXml.createReader(filename, ROOTS, {});
+        
+        parser.on('record', record => console.log(record));
+    });
 }
 
 function parse(data) {
@@ -42,6 +44,6 @@ function load(path) {
 module.exports = {
     parse,
     load,
-    toXML,
+    streamXML,
     read
 };
