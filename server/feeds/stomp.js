@@ -131,7 +131,6 @@ function parseUpdate(update) {
 let tick = null;
 
 module.exports = () => {
-    console.log("Starting stomp listener");
     tick = new Date();
     Stomp.getMessages(message => {
         const xMessage = xmljs.parseXml(message);
@@ -147,5 +146,5 @@ module.exports = () => {
                 }
             });
         }
-    });
+    }).catch(err => console.log("Stomp: Fatal error", err));
 };

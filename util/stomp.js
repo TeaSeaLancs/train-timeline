@@ -18,10 +18,12 @@ function connect() {
     }
 
     return new Promise((resolve, reject) => {
+        console.log("Starting stomp listener");
         const client = Stomp.overTCP('datafeeds.nationalrail.co.uk', 61613);
         
         function connected() {
             singleton = client;
+            console.log("Started stomp listener");
             resolve(singleton);
         }
         
