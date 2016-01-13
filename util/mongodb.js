@@ -7,9 +7,9 @@ let singleton = null;
 
 function connect() {
     if (singleton) {
-        return Promise.resolve(singleton);
+        return singleton;
     } else {
-        return new Promise(function(resolve, reject) {
+        singleton = new Promise(function(resolve, reject) {
             const mongoURL = config.mongolab.uri;
             MongoClient.connect(mongoURL, function(err, db) {
                if (err) {
@@ -20,6 +20,7 @@ function connect() {
                }
             });
         });
+        return singleton;
     }
 }
 
