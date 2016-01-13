@@ -64,7 +64,7 @@ function parsePrediction(journey) {
 
 function updateJourney(update, journey, uid, ssd) {
     if (!journey) {
-        debug(`Update received for ${uid} ${ssd}, but it's not in the DB`);
+        debug(`Stomp: Update received for ${uid} ${ssd}, but it's not in the DB`);
         return false;
     }
 
@@ -77,7 +77,7 @@ function updateJourney(update, journey, uid, ssd) {
 
         if (!found) {
             if (journey.stops[tpl]) {
-                console.error("Mismatched update");
+                console.error("Stomp: Mismatched update");
                 console.error(location.toString());
                 console.log(journey.stops[tpl]);
             }
@@ -106,7 +106,7 @@ function updateJourney(update, journey, uid, ssd) {
     } else {
         return Journeys.update(journey.uid, journey.ssd, updates)
             .then(() => {
-                debug(`Processed update for ${journey.uid} - ${journey.ssd}`);
+                console.log(`Stomp: Processed update for ${journey.uid} - ${journey.ssd}`);
                 return updated;
             });
     }
@@ -117,14 +117,14 @@ function parseUpdate(update) {
     const ssd = update.attr('ssd').value();
 
     if (!uid || !ssd) {
-        console.error("Update retrieved, but no idea what it is");
+        console.error("Stomp: Update retrieved, but no idea what it is");
         return;
     }
 
     return Journeys.findByID(uid, ssd)
         .then(journey => updateJourney(update, journey, uid, ssd))
         .catch((err) => {
-            console.error("Error parsing update", err, err.stack);
+            console.error("Stomp: Error parsing update", err, err.stack);
         });
 }
 
@@ -143,7 +143,7 @@ module.exports = () => {
                     tick = now;
                 } else if ((now.getTime() - tick.getTime()) > 5000) {
                     tick = now;
-                    debug("Still alive");
+                    console.log("Stomp: Still alive");
                 }
             });
         }
