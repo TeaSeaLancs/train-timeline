@@ -150,7 +150,7 @@ args.forEach((arg) => {
     if (arg === '--sync') {
         processed = true;
         doSync();
-    } else if (arg === '--watch') {
+    } else if (arg.startsWith('--watch')) {
         processed = true;
         doWatch(getArgValue(arg, '--watch'));
     }
