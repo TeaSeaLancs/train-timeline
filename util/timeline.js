@@ -5,6 +5,7 @@ const Timeline = require('pebble-api').Timeline;
 
 const flavours = require('./pin-flavours');
 const debug = require('./debug');
+const config = require('./config');
 
 const timeline = new Timeline();
 
@@ -23,9 +24,9 @@ function timeOfDay(date) {
     } else {
         return 'evening';
     }
-}
+}   
 
-function generatePin(userJourney/*, oldStatus TODO IMPLEMENT*/) {
+function generatePin(userJourney, oldStatus) {
     const flavourText = flavours.get(userJourney.status);
 
     const layout = _.extend(flavourText, {
@@ -50,9 +51,14 @@ function generatePin(userJourney/*, oldStatus TODO IMPLEMENT*/) {
 }
 
 function send(user, userJourney, oldStatus) {
+    if (config.environment === 'test') {
+        console.log(`Timeline: TEST Would have sent pin to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
+        return Promise.resolve();
+    }
+    
     return new Promise(function (resolve, reject) {
         try {
-            debug(`Timeline: Sending pin to ${user.id} for ${userJourney.from} - ${userJourney.to}`);
+            debug(`Timeline: Sending pin to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
             const pin = generatePin(userJourney, oldStatus);
             timeline.sendUserPin(user._id, pin, (err) => {
                 if (err) {

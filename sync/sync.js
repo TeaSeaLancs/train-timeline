@@ -10,6 +10,7 @@ const timeline = require('../util/timeline');
 const debug = require('../util/debug');
 
 const analyser = require('./analysers');
+const watcher = require('./watch');
 
 function generateDate(time) {
     return moment(time, 'HH:mm').toDate();
@@ -19,7 +20,7 @@ function analyseSection(section) {
     const analyserResults = analyser.analyse(section);
     const currentStatus = section.status;
     
-    const counts = _.countBy(analyserResults);
+    const counts = _.countBy(analyserResults, 'state');
     const results = _.reduce(counts, (biggest, count, status) => {
         if (!biggest || count > biggest.count) {
             biggest = {
@@ -31,20 +32,29 @@ function analyseSection(section) {
         return biggest;
     }, 0);
     
-    const analysis = {
+    return {
         changed: results.status !== currentStatus,
         from: currentStatus,
-        to: results.status
+        to: results.status,
+        details: analyserResults
     };
-    
-    return analysis;
 }
 
 function analyse(user) {
-    return {
+    const analysis = {
         out: analyseSection(user.out),
         return: analyseSection(user.return)
     };
+    
+    if (watcher.isUserWatched(user._id)) {
+        console.log(`Sync: Analysis update for ${user._id}`);
+        console.log(JSON.stringify(analysis));
+    }
+    
+    user.out.status = analysis.out.to;
+    user.return.status = analysis.return.to;
+    
+    return analysis;
 }
 
 function reduce(journeys) {
@@ -129,21 +139,13 @@ function updateSection(section, journey) {
     return false;
 }
 
-function logAnalysis(user, userJourney, analysis) {
-    console.log(`Analysis update for ${user._id}, ${userJourney.from}-${userJourney.to}}`);
-    console.log(`Updated from ${analysis.from} to ${analysis.to}`);
-    debug(analysis);
-}
-
 function actOnAnalysis(user, analysis) {
     const updates = [];
     if (analysis.out.changed) {
-        logAnalysis(user, user.out, analysis.out);
         updates.push(timeline.send(user, user.out, analysis.out.from));
     }
     
     if (analysis.return.changed) {
-        logAnalysis(user, user.return, analysis.return);
         updates.push(timeline.send(user, user.return, analysis.return.from));
     }
     

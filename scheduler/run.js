@@ -15,6 +15,8 @@ const sync = require('../sync/sync');
 
 const debug = require('../util/debug');
 
+const watcher = require('../sync/watch');
+
 // Internal functions for sorting out everything
 function x(fn) {
     return function xPanded(results) {
@@ -81,7 +83,9 @@ function updateUsers() {
 
     return Users.getAll().then(users => {
         return Promise.all(users.map(user => sync.populate(user)))
-            .then(() => console.log("Scheduler: Updated users"));
+            .then(() => console.log("Scheduler: Updated users"))
+            .then(() => watcher.update())
+            .then(() => console.log("Scheduler: Updated watched users"));
     });
 }
 
@@ -94,6 +98,7 @@ function clearJourneys(passthrough) {
 function disconnect() {
     mongodb.disconnect();
     ftp.disconnect();
+    console.log("Scheduler: Disconnected");
 }
 
 function handleError(err) {

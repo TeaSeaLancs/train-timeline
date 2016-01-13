@@ -6,8 +6,8 @@ const analysers = [
 
 const states = require('./states');
 
-function analyse(journey) {
-    return analysers.map(analyser => analyser(journey));
+function analyse(userJourney) {
+    return analysers.map(analyser => analyser(userJourney));
 }
 
 module.exports = {

@@ -7,6 +7,8 @@ const Schedule = require('../../util/schedule-parser');
 const XmlSchedule = require('../../util/xml-parser');
 const debug = require('../../util/debug');
 
+const watcher = require('../../sync/watch');
+
 const Journeys = require('../../models/journeys');
 
 function getStop(stops, times) {
@@ -58,7 +60,7 @@ function parsePrediction(journey) {
     return {
         arrival,
         departure,
-        delayed: !((arrival && arrival.delayed) || (departure && departure.delayed))
+        delayed: !!((arrival && arrival.delayed) || (departure && departure.delayed))
     };
 }
 
@@ -101,12 +103,16 @@ function updateJourney(update, journey, uid, ssd) {
         return updates;
     }, {});
     
+    if (watcher.isJourneyWatched(journey.uid, journey.ssd)) {
+        console.log(`Stomp: Updates calculated for ${journey.uid}-${journey.ssd}`, updates);
+    }
+    
     if (!updated) {
         return updated;
     } else {
         return Journeys.update(journey.uid, journey.ssd, updates)
             .then(() => {
-                console.log(`Stomp: Processed update for ${journey.uid} - ${journey.ssd}`);
+                debug(`Stomp: Processed update for ${journey.uid} - ${journey.ssd}`);
                 return updated;
             });
     }
@@ -119,6 +125,11 @@ function parseUpdate(update) {
     if (!uid || !ssd) {
         console.error("Stomp: Update retrieved, but no idea what it is");
         return;
+    }
+    
+    if (watcher.isJourneyWatched(uid, ssd)) {
+        console.log(`Stomp: Update for watched journey ${uid}-${ssd}`);
+        console.log(update.toString());
     }
 
     return Journeys.findByID(uid, ssd)
