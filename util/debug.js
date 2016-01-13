@@ -4,8 +4,8 @@ const hasDebug = process.argv.indexOf("--debug") > -1;
 
 const debug = (!hasDebug) ? 
                     function() {} : 
-                    (message) => console.log(message);
+                    () => console.log.apply(console, arguments);
 
-debug.on = function() { return hasDebug; }
+debug.on = function() { return hasDebug; };
 
 module.exports = debug;
