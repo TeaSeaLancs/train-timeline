@@ -10,20 +10,25 @@ const delayMap = {
 };
 
 module.exports = userJourney => {
-    const journeyCount = _.size(userJourney.journeys);
-    const delayedCount = _.reduce(userJourney.journeys, (delayed, journey) => {
+    const now = new Date();
+    const stats = _.reduce(userJourney.journeys, (stats, journey) => {
         
-        if (journey.delayed || (journey.actualTime - journey.predictedTime) > 0) {
-            delayed += 1;
+        // Only take into account journeys which are after now
+        if ((journey.actualTime - now) > 0) {
+            stats.count += 1;
+            
+            if (journey.delayed || (journey.actualTime - journey.predictedTime) > 0) {
+                stats.delayed += 1;
+            }
         }
         
-        return delayed;
-    }, 0);
+        return stats;
+    }, {count: 0, delayed: 0});
     
-    if (!delayedCount) {
+    if (!stats.delayed || !stats.count) {
         return states.ok;
     } else {
-        const delayedRatio = delayedCount / journeyCount;
+        const delayedRatio = stats.delayed / stats.count;
         return _.find(delayMap, (state, delay) => delayedRatio <= +delay);
     }
 };
