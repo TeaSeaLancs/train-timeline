@@ -85,9 +85,10 @@ function updateUsers() {
     });
 }
 
-function clearJourneys() {
+function clearJourneys(passthrough) {
     console.log("Scheduler: Clearing existing journeys");
-    return mongodb.connect().then(mongo => mongo.collection('journeys').remove({}));
+    return mongodb.connect().then(mongo => mongo.collection('journeys').remove({}))
+        .then(() => passthrough);
 }
 
 function disconnect() {
@@ -106,7 +107,7 @@ function handleError(err) {
         Promise.all([ftp.connect(), mongodb.connect()])
             .then(x((ftp) => {
                 return findSchedule(ftp)
-                    .then(clearJourneys)
+                    .then(scheduleName => clearJourneys(scheduleName))
                     .then(scheduleName => getSchedule(scheduleName, ftp))
                     .then(fileName => parseSchedule(fileName))
                     .then(updateUsers)
