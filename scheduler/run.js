@@ -141,10 +141,18 @@ function doSync() {
         .catch(handleError);
 }
 
+function doWatch(userID) {
+    watcher.watch(userID)
+        .then(disconnect);
+}
+
 args.forEach((arg) => {
     if (arg === '--sync') {
         processed = true;
         doSync();
+    } else if (arg === '--watch') {
+        processed = true;
+        doWatch(getArgValue(arg, '--watch'));
     }
 });
 
