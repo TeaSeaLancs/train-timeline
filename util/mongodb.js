@@ -15,7 +15,6 @@ function connect() {
                if (err) {
                    reject(err);
                } else {
-                   singleton = db;
                    resolve(db);
                }
             });
