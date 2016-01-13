@@ -53,11 +53,11 @@ function logParseProgress(message) {
 }
 
 function parseSchedule(fileName) {
-    
+
     const batchSaveRequests = [];
-    
+
     let count = 0;
-    
+
     function saveBatch(batch) {
         const insertRequest = Journeys.insert(batch)
             .then(() => Promise.resolve())
@@ -65,12 +65,12 @@ function parseSchedule(fileName) {
                 console.log(err);
                 return Promise.reject(err);
             });
-        
+
         batchSaveRequests.push(insertRequest);
         count += batch.length;
         logParseProgress(`Parsed ${count} journeys`);
     }
-    
+
     return scheduler.parse(fileName, saveBatch)
         .then(() => Promise.all(_.values(batchSaveRequests)))
         .then(() => true);
@@ -101,22 +101,48 @@ function handleError(err) {
     disconnect();
 }
 
- function update() {
-        // We don't reference mongodb's returned connection, but we want to make sure we can connect
-        // before we continue
-        Promise.all([ftp.connect(), mongodb.connect()])
-            .then(x((ftp) => {
-                return findSchedule(ftp)
-                    .then(scheduleName => clearJourneys(scheduleName))
-                    .then(scheduleName => getSchedule(scheduleName, ftp))
-                    .then(fileName => parseSchedule(fileName))
-                    .then(updateUsers)
-                    .then(disconnect);
-            }))
-            .catch(handleError);
-    }
+function update() {
+    // We don't reference mongodb's returned connection, but we want to make sure we can connect
+    // before we continue
+    Promise.all([ftp.connect(), mongodb.connect()])
+        .then(x((ftp) => {
+            return findSchedule(ftp)
+                .then(scheduleName => clearJourneys(scheduleName))
+                .then(scheduleName => getSchedule(scheduleName, ftp))
+                .then(fileName => parseSchedule(fileName))
+                .then(updateUsers)
+                .then(disconnect);
+        }))
+        .catch(handleError);
+}
 
 // Callable functions
+const args = process.argv.slice(2);
+let processed = false;
+
+function getArgValue(arg, name) {
+    const val = arg.substring(name.length + 1);
+    if (!val) {
+        console.error(`You need to supply a value for ${name}`);
+        process.exit(1);
+    }
+
+    return val;
+}
+
+function doSync() {
+    updateUsers()
+        .then(disconnect)
+        .catch(handleError);
+}
+
+args.forEach((arg) => {
+    if (arg === '--sync') {
+        processed = true;
+        doSync();
+    }
+});
+
 /*
 const callable = {
     function insertFromFile(filename) {
@@ -151,41 +177,7 @@ const callable = {
         parseSchedule(filename)
             .catch(handleError);
     }
-}
-
-const args = process.argv.slice(2);
-let processed = false;
-
-function getArgValue(arg, name) {
-    const val = arg.substring(name.length + 1);
-    if (!val) {
-        console.error(`You need to supply a value for ${name}`);
-        process.exit(1);
-    }
-
-    return val;
-}
-
-args.forEach((arg) => {
-    if (arg === '--clear') {
-        processed = true;
-        clear();
-    } else if (arg === '--sync') {
-        processed = true;
-        doSync();
-    } else if (arg.startsWith('--parse')) {
-        processed = true;
-        parse(getArgValue(arg, '--parse'));
-    } else if (arg.startsWith("--file")) {
-        processed = true;
-        insertFromFile(getArgValue(arg, '--file'));
-    } else if (arg.startsWith("--dump")) {
-        processed = true;
-        dumpSchedule(getArgValue(arg, '--dump'));
-    }
-});*/
-
-const processed = false;
+}*/
 
 if (!processed) {
     update();

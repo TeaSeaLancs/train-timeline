@@ -1,11 +1,13 @@
 "use strict";
 
 const moment = require('moment');
+const _ = require('underscore');
 
 const Journeys = require('../models/journeys');
 const Users = require('../models/users');
 
 const timeline = require('../util/timeline');
+const debug = require('../util/debug');
 
 const analyser = require('./analysers');
 
@@ -15,12 +17,24 @@ function generateDate(time) {
 
 function analyseSection(section) {
     const analyserResults = analyser.analyse(section);
-    // TODO Some damn analysis
+    const currentStatus = section.status;
+    
+    const counts = _.countBy(analyserResults);
+    const results = _.reduce(counts, (biggest, count, status) => {
+        if (!biggest || count > biggest.count) {
+            biggest = {
+                count,
+                status
+            };
+        }
+        
+        return biggest;
+    }, 0);
     
     const analysis = {
-        changed: false,
-        from: null,
-        to: analyser.states.ok
+        changed: results.status !== currentStatus,
+        from: currentStatus,
+        to: results.status
     };
     
     return analysis;
@@ -115,14 +129,22 @@ function updateSection(section, journey) {
     return false;
 }
 
+function logAnalysis(user, userJourney, analysis) {
+    console.log(`Analysis update for ${user._id}, ${userJourney.from}-${userJourney.to}}`);
+    console.log(`Updated from ${analysis.from} to ${analysis.to}`);
+    debug(analysis);
+}
+
 function actOnAnalysis(user, analysis) {
     const updates = [];
     if (analysis.out.changed) {
+        logAnalysis(user, user.out, analysis.out);
         updates.push(timeline.send(user, user.out, analysis.out.from));
     }
     
     if (analysis.return.changed) {
-        updates.push(timeline.send(user, user.in, analysis.in.from));
+        logAnalysis(user, user.return, analysis.return);
+        updates.push(timeline.send(user, user.return, analysis.return.from));
     }
     
     return Promise.all(updates);
