@@ -29,7 +29,8 @@ function updateUser(user, journey) {
 }
 
 Journeys.on('update', function(journey) {
-    Users.findForJourney(journey.uid)
+    // TODO Wow how did I miss this, this needs to handle multiple users jesus
+    Users.findForJourney(journey.uid, journey.ssd)
         .then((user) => updateUser(user, journey))
         .then((updated) => updated ? success('update', journey) : noop('update', journey))
         .catch((err) => error('update', journey, err));

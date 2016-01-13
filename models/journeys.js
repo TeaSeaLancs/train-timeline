@@ -46,6 +46,7 @@ function stripJourney(journey, from, to) {
         return {
             uid: journey.uid,
             trainID: journey.trainID,
+            ssd: journey.ssd,
             from: stops.from,
             to: stops.to
         };
@@ -89,6 +90,7 @@ function queryForJourneys(from, to, around, db) {
 
     projection.uid = 1;
     projection.trainID = 1;
+    projection.ssd = 1;
     projection[`stops.${from}`] = 1;
     projection[`stops.${to}`] = 1;
 

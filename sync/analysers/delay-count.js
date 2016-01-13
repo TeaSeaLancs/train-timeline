@@ -10,6 +10,7 @@ const delayMap = {
 };
 
 module.exports = userJourney => {
+    const journeyCount = _.size(userJourney.journeys);
     const delayedCount = _.reduce(userJourney.journeys, (delayed, journey) => {
         
         if (journey.delayed || (journey.actualTime - journey.predictedTime) > 0) {
@@ -22,7 +23,7 @@ module.exports = userJourney => {
     if (!delayedCount) {
         return states.ok;
     } else {
-        const delayedRatio = delayedCount / userJourney.journeys.length;
+        const delayedRatio = delayedCount / journeyCount;
         return _.find(delayMap, (state, delay) => delayedRatio <= +delay);
     }
 };
