@@ -37,6 +37,7 @@ function reduce(journeys) {
     return journeys.reduce((journeys, journey) => {
         journeys[journey.uid] = {
             uid: journey.uid,
+            ssd: journey.ssd,
             predictedTime: journey.from.predictedTime,
             actualTime: journey.from.actualTime,
             delayed: journey.from.delayed
@@ -64,7 +65,7 @@ function pushToTimeline(user) {
 function generateUserJourney(from, to, date) {
     return Journeys.find(from, to, date)
         .then((journeys) => {
-            var creationDate = new Date();
+            const creationDate = new Date();
             journeys = reduce(journeys);
             return {
                 from,
@@ -115,7 +116,7 @@ function updateSection(section, journey) {
 }
 
 function actOnAnalysis(user, analysis) {
-    var updates = [];
+    const updates = [];
     if (analysis.out.changed) {
         updates.push(timeline.send(user, user.out, analysis.out.from));
     }

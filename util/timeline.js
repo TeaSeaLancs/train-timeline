@@ -14,7 +14,7 @@ function generateID(userJourney) {
 }
 
 function timeOfDay(date) {
-    var hr = date.getHours();
+    const hr = date.getHours();
 
     if (hr < 12) {
         return 'morning';

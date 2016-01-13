@@ -15,10 +15,10 @@ function find(userID) {
     });
 }
 
-function findForJourney(uid) {
+function findForJourney(uid, ssd) {
     const outQuery = {}, returnQuery = {};
-    outQuery[`out.journeys.${uid}`] = {$exists: true};
-    returnQuery[`return.journeys.${uid}`] = {$exists: true};
+    outQuery[`out.journeys.${uid}`] = {$exists: true, ssd};
+    returnQuery[`return.journeys.${uid}`] = {$exists: true, ssd};
     return mongodb.connect().then(db => db.collection('users').findOne({$or: [outQuery,returnQuery]}));
 }
 

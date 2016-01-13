@@ -84,7 +84,7 @@ function get(status) {
         return;
     }
 
-    var flavour = map[status];
+    const flavour = map[status];
 
     return _.mapObject(flavour, (val, name) => {
         if (name in randomEntries) {

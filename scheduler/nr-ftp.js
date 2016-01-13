@@ -25,7 +25,7 @@ Connection.prototype.findSchedule = function () {
             if (err) {
                 reject(err);
             } else {
-                var schedule = list.filter(scheduleFilter)[0];
+                const schedule = list.filter(scheduleFilter)[0];
                 if (!schedule) {
                     reject(new Error("No schedule exists on servers, this is a big problem!"));
                 } else {
