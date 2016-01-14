@@ -4,6 +4,7 @@ const Journeys = require('../../models/journeys');
 const Users = require('../../models/users');
 
 const sync = require('../../sync/sync');
+const watcher = require('../../sync/watch');
 
 const debug = require('../../util/debug');
 
@@ -16,7 +17,8 @@ function success(operation, journey) {
 }
 
 function noop(operation, journey) {
-    debug(`Journey: Nothing to be done for ${operation} on ${journey.uid}`);
+    const log = watcher.isJourneyWatched(journey.uid, journey.ssd) ? console.log : debug;
+    log(`Journey: Nothing to be done for ${operation} on ${journey.uid}`);
 }
 
 function updateUsers(users, journey) {
