@@ -5,7 +5,7 @@ const EventEmitter = require('events');
 
 const mongodb = require('../util/mongodb');
 
-const watcher = require('../../sync/watch');
+const watcher = require('../sync/watch');
 
 const emitter = new EventEmitter();
 
