@@ -22,9 +22,6 @@ function noop(operation, journey) {
 }
 
 function updateUsers(users, journey) {
-    if (watcher.isJourneyWatched(journey.uid, journey.ssd)) {
-        console.log(`Journey: Found users for watched journey ${journey.uid}-${journey.ssd}`, users);
-    }
     if (!users || !users.length) {
         return Promise.resolve(false);
     }
