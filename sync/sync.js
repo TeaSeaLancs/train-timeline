@@ -7,7 +7,6 @@ const Journeys = require('../models/journeys');
 const Users = require('../models/users');
 
 const timeline = require('../util/timeline');
-const debug = require('../util/debug');
 
 const analyser = require('./analysers');
 const watcher = require('./watch');
@@ -48,7 +47,12 @@ function analyse(user) {
     
     if (watcher.isUserWatched(user._id)) {
         console.log(`Sync: Analysis update for ${user._id}`);
-        console.log(JSON.stringify(analysis));
+        const closestJourney = Journeys.chooseClosestUserJourney(user.out, user.return);
+        if (closestJourney === user.out) {
+            console.log("Out: ", JSON.stringify(analysis.out));
+        } else {
+        console.log("Return: ", JSON.stringify(analysis.return));
+        }
     }
     
     user.out.status = analysis.out.to;

@@ -99,6 +99,7 @@ function disconnect() {
     mongodb.disconnect();
     ftp.disconnect();
     console.log("Scheduler: Disconnected");
+    process.exit(0);
 }
 
 function handleError(err) {

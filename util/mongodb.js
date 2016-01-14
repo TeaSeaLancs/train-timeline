@@ -3,6 +3,8 @@
 const MongoClient = require("mongodb").MongoClient;
 const config = require("./config");
 
+const debug = require('../util/debug');
+
 let singletonPromise = null;
 let singleton = null;
 
@@ -12,6 +14,7 @@ function connect() {
     } else {
         singletonPromise = new Promise(function(resolve, reject) {
             const mongoURL = config.mongolab.uri;
+            debug("MongoDB: Connecting to MongoDB");
             MongoClient.connect(mongoURL, function(err, db) {
                if (err) {
                    reject(err);
@@ -27,6 +30,7 @@ function connect() {
 
 function disconnect() {
     if (singleton) {
+        debug("MongoDB: Disconnecting from MongoDB");
         singleton.close();
         singletonPromise = null;
         singletonPromise = null;

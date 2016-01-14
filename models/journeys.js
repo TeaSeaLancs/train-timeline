@@ -148,6 +148,28 @@ function update(uid, ssd, updates) {
         });
 }
 
+function chooseClosestUserJourney() {
+    const userJourneys = Array.prototype.slice.call(arguments, 0);
+    if (!userJourneys.length) {
+        return null;
+    }
+    const now = moment();
+    
+    const times = userJourneys.map(userJourney => {
+        return {
+            diff: Math.abs(now.diff(userJourney.date)),
+            userJourney
+        };
+    });
+    
+    return times.reduce((closest, userJourney) => {
+        if (userJourney.diff < closest.diff) {
+            closest = userJourney;
+        }
+        return closest;
+    }).userJourney;
+}
+
 function on(event, cb) {
     return emitter.on(event, cb);
 }
@@ -155,6 +177,7 @@ function on(event, cb) {
 module.exports = {
     find,
     findByID,
+    chooseClosestUserJourney,
     stripJourney,
     insert,
     update,

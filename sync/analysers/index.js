@@ -1,7 +1,7 @@
 "use strict";
 
 const analysers = [
-    require('./delay-count')
+    require('./delay-ratio')
 ];
 
 const states = require('./states');
