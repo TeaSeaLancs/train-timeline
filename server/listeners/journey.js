@@ -19,19 +19,17 @@ function noop(operation, journey) {
     debug(`Journey: Nothing to be done for ${operation} on ${journey.uid}`);
 }
 
-function updateUser(user, journey) {
-    if (!user) {
+function updateUsers(users, journey) {
+    if (!users || !users.length) {
         return Promise.resolve(false);
     }
-    if (user) {
-        return sync.update(user, journey);
-    }
+    
+    return Promise.all(users.map(user => sync.update(user, journey)));
 }
 
-Journeys.on('update', function(journey) {
-    // TODO Wow how did I miss this, this needs to handle multiple users jesus
+Journeys.on('update', function(journey, updates) {
     Users.findForJourney(journey.uid, journey.ssd)
-        .then((user) => updateUser(user, journey))
+        .then((users) => updateUsers(users, journey))
         .then((updated) => updated ? success('update', journey) : noop('update', journey))
         .catch((err) => error('update', journey, err));
 });

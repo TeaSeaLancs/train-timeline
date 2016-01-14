@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const moment = require('moment');
+const _ = require('underscore');
 
 const mongodb = require('../util/mongodb');
 
@@ -51,7 +52,7 @@ function stripJourney(journey, from, to) {
             to: stops.to
         };
     }
-    
+
     return null;
 }
 
@@ -61,7 +62,7 @@ function constructUserJourneys(results, from, to) {
         if (userJourney) {
             journeys.push(userJourney);
         }
-        
+
         return journeys;
     }, []);
 }
@@ -118,10 +119,22 @@ function findByID(uid, ssd) {
         }));
 }
 
+// TODO Actually make this handle N-level objects. It's too much to think about at this time of day.
+function flatten(obj) {
+    return _.reduce(obj, (flattened, subObject, subKey) => {
+        return _.reduce(subObject, (flattened, val, key) => {
+            flattened[`${subKey}.${key}`] = val;
+            return flattened;
+        }, flattened);
+    }, {});
+}
+
 function update(uid, ssd, updates) {
-    
-    const updateObj = {$set: updates};
-    
+
+    const updateObj = {
+        $set: flatten(updates)
+    };
+
     return mongodb.connect()
         .then((db) => db.collection('journeys').findOneAndUpdate({
             uid, ssd
@@ -130,7 +143,7 @@ function update(uid, ssd, updates) {
         }))
         .then((result) => {
             if (result.value) {
-                emitter.emit('update', result.value);
+                emitter.emit('update', result.value, updates);
             }
         });
 }
@@ -145,5 +158,6 @@ module.exports = {
     stripJourney,
     insert,
     update,
-    on
+    on,
+    flatten
 };

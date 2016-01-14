@@ -21,7 +21,7 @@ function findForJourney(uid, ssd) {
     outQuery[`out.journeys.${uid}.ssd`] = ssd;
     returnQuery[`return.journeys.${uid}`] = {$exists: true};
     returnQuery[`return.journeys.${uid}`] = ssd;
-    return mongodb.connect().then(db => db.collection('users').findOne({$or: [outQuery,returnQuery]}));
+    return mongodb.connect().then(db => db.collection('users').find({$or: [outQuery,returnQuery]}).toArray());
 }
 
 function upsert(user, oldUser) {

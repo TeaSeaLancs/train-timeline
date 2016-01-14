@@ -94,8 +94,10 @@ function updateJourney(update, journey, uid, ssd) {
                 const predictionTime = Schedule.parseTime(journey.ssd, predictionArea.time);
                 if (predictionTime.getTime() !== stop.actualTime.getTime()) {
                     updated = true;
-                    updates[`stops.${tpl}.${idx}.actualTime`] = predictionTime;
-                    updates[`stops.${tpl}.${idx}.delayed`] = prediction.delayed;
+                    updates[`stops.${tpl}.${idx}`] = {
+                        actualTime: predictionTime,
+                        delayed: prediction.delayed
+                    };
                 }
             }
         }
