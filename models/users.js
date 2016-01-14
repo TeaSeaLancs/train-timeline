@@ -5,6 +5,8 @@ const EventEmitter = require('events');
 
 const mongodb = require('../util/mongodb');
 
+const watcher = require('../../sync/watch');
+
 const emitter = new EventEmitter();
 
 function find(userID) {
@@ -21,6 +23,11 @@ function findForJourney(uid, ssd) {
     outQuery[`out.journeys.${uid}.ssd`] = ssd;
     returnQuery[`return.journeys.${uid}`] = {$exists: true};
     returnQuery[`return.journeys.${uid}`] = ssd;
+    
+    const query = {$or: [outQuery,returnQuery]};
+    if (watcher.isJourneyWatched(uid, ssd)) {
+        console.log(`Users: Finding users for watched journey ${uid}-${ssd}`, query);
+    }
     return mongodb.connect().then(db => db.collection('users').find({$or: [outQuery,returnQuery]}).toArray());
 }
 
