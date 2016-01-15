@@ -40,7 +40,6 @@ function parse(filename, emit) {
             parser.on('end', () => {
                 emit(batch);
                 resolve();
-                parser.close();
             });
 
             parser.on('error', err => reject(err));
