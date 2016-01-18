@@ -28,3 +28,6 @@ node_modules
 
 # Heroku environment
 .env
+
+# Test environment schedules
+*.xml.gz

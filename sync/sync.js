@@ -81,6 +81,9 @@ function shouldPushToday(user) {
 
 function pushToTimeline(user) {
     if (!shouldPushToday(user)) {
+        if (watcher.isUserWatched(user._id)) {
+            console.log(`Watched user ${user._id} does not travel today, not pushing to timeline`);
+        }
         return Promise.resolve();
     }
     
