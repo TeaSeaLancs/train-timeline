@@ -58,8 +58,8 @@ function send(user, userJourney, oldStatus) {
     
     return new Promise(function (resolve, reject) {
         try {
-            debug(`Timeline: Sending pin to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
             const pin = generatePin(userJourney, oldStatus);
+            debug(`Timeline: Sending pin ${pin.id} to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
             timeline.sendUserPin(user._id, pin, (err) => {
                 if (err) {
                     reject(err);
