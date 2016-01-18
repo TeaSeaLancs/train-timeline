@@ -2,6 +2,7 @@
 
 const _ = require('underscore');
 const Timeline = require('pebble-api').Timeline;
+const moment = require('moment');
 
 const flavours = require('./pin-flavours');
 const debug = require('./debug');
@@ -11,7 +12,7 @@ const timeline = new Timeline();
 
 function generateID(userJourney) {
     // The ID is always deterministic so the same journey on the same day will always match
-    return [userJourney.from, userJourney.to, userJourney.date.getTime()].join('-');
+    return [userJourney.from, userJourney.to, moment(userJourney.date).format('YYYY-MM-DD')].join('-');
 }
 
 function timeOfDay(date) {
