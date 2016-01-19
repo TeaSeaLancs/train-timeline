@@ -82,10 +82,12 @@ function remove(user, userJourney) {
             // This is annoying, but we actually have to generate the full pin again 
             // to delete it, even though only the ID is required
             const pin = generatePin(userJourney);
+            debug(`Timeline: Removing pin ${pin.id} for ${user._id} for ${userJourney.from} - ${userJourney.to}`);
             timeline.deleteUserPin(user._id, pin, (err) => {
                 if (err) {
                     reject(err);
                 } else {
+                    debug(`Timeline: Removed pin`);
                     resolve();
                 }
             });
