@@ -31,8 +31,8 @@ module.exports = userJourney => {
         const delayTime = moment(journey.actualTime).diff(journey.predictedTime, 'minutes', true);
         let delaySeverity = Math.min(delayTime / SEVERITY_FACTOR, 1);
         
-        // If this journey is marked as delayed, but there's no delay time, just assume the severity is 1 anyway.
-        if (!delayTime && journey.delayed) {
+        // If this journey is marked as delayed, just assume the severity is 1 anyway.
+        if (journey.delayed) {
             delaySeverity = 1;
         }
         
