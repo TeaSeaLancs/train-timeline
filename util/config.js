@@ -5,10 +5,15 @@ const vars = ['MONGOLAB_URI',
               'FTP_PASSWORD', 
               'STOMP_QUEUE', 
               'STOMP_USER', 
-              'STOMP_PASSWORD'];
+              'STOMP_PASSWORD',
+              'ENVIRONMENT'];
+
+const defaults = {
+    ENVIRONMENT: 'production'
+};
 
 module.exports = vars.reduce((config, variable) => {
-    const val = process.env[variable];
+    let val = process.env[variable] || defaults[variable];
     if (!val) {
         throw `Missing environment variable ${variable}`;
     }

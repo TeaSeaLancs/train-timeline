@@ -4,7 +4,10 @@ const xmljs = require('libxmljs');
 
 const Stomp = require('../../util/stomp');
 const Schedule = require('../../util/schedule-parser');
+const XmlSchedule = require('../../util/xml-parser');
 const debug = require('../../util/debug');
+
+const watcher = require('../../sync/watch');
 
 const Journeys = require('../../models/journeys');
 
@@ -57,26 +60,26 @@ function parsePrediction(journey) {
     return {
         arrival,
         departure,
-        delayed: !((arrival && arrival.delayed) || (departure && departure.delayed))
+        delayed: !!((arrival && arrival.delayed) || (departure && departure.delayed))
     };
 }
 
 function updateJourney(update, journey, uid, ssd) {
     if (!journey) {
-        debug(`Update received for ${uid} ${ssd}, but it's not in the DB`);
+        debug(`Stomp: Update received for ${uid} ${ssd}, but it's not in the DB`);
         return false;
     }
 
     let updated = false;
     const updates = update.find('ns3:Location', Stomp.pushPortNS).reduce((updates, location) => {
         const tpl = location.attr("tpl").value();
-        const times = Schedule.getTimes(location);
+        const times = XmlSchedule.getTimes(location);
 
         const found = getStop(journey.stops[tpl], times);
 
         if (!found) {
             if (journey.stops[tpl]) {
-                console.error("Mismatched update");
+                console.error("Stomp: Mismatched update");
                 console.error(location.toString());
                 console.log(journey.stops[tpl]);
             }
@@ -91,8 +94,10 @@ function updateJourney(update, journey, uid, ssd) {
                 const predictionTime = Schedule.parseTime(journey.ssd, predictionArea.time);
                 if (predictionTime.getTime() !== stop.actualTime.getTime()) {
                     updated = true;
-                    updates[`stops.${tpl}.${idx}.actualTime`] = predictionTime;
-                    updates[`stops.${tpl}.${idx}.delayed`] = prediction.delayed;
+                    updates[`stops.${tpl}.${idx}`] = {
+                        actualTime: predictionTime,
+                        delayed: prediction.delayed
+                    };
                 }
             }
         }
@@ -100,12 +105,16 @@ function updateJourney(update, journey, uid, ssd) {
         return updates;
     }, {});
     
+    if (watcher.isJourneyWatched(journey.uid, journey.ssd)) {
+        console.log(`Stomp: Updates calculated for ${journey.uid}-${journey.ssd}`, updates);
+    }
+    
     if (!updated) {
         return updated;
     } else {
         return Journeys.update(journey.uid, journey.ssd, updates)
             .then(() => {
-                debug(`Processed update for ${journey.uid} - ${journey.ssd}`);
+                debug(`Stomp: Processed update for ${journey.uid} - ${journey.ssd}`);
                 return updated;
             });
     }
@@ -116,21 +125,25 @@ function parseUpdate(update) {
     const ssd = update.attr('ssd').value();
 
     if (!uid || !ssd) {
-        console.error("Update retrieved, but no idea what it is");
+        console.error("Stomp: Update retrieved, but no idea what it is");
         return;
+    }
+    
+    if (watcher.isJourneyWatched(uid, ssd)) {
+        console.log(`Stomp: Update for watched journey ${uid}-${ssd}`);
+        console.log(update.toString());
     }
 
     return Journeys.findByID(uid, ssd)
         .then(journey => updateJourney(update, journey, uid, ssd))
         .catch((err) => {
-            console.error("Error parsing update", err, err.stack);
+            console.error("Stomp: Error parsing update", err, err.stack);
         });
 }
 
 let tick = null;
 
 module.exports = () => {
-    console.log("Starting stomp listener");
     tick = new Date();
     Stomp.getMessages(message => {
         const xMessage = xmljs.parseXml(message);
@@ -142,9 +155,9 @@ module.exports = () => {
                     tick = now;
                 } else if ((now.getTime() - tick.getTime()) > 5000) {
                     tick = now;
-                    debug("Still alive");
+                    console.log("Stomp: Still alive");
                 }
             });
         }
-    });
+    }).catch(err => console.log("Stomp: Fatal error", err));
 };

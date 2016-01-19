@@ -1,8 +1,8 @@
 "use strict";
 
 const fs = require('fs');
-const filesize = require('filesize');
 const _ = require('underscore');
+const filesize = require('filesize');
 
 const ftp = require('./nr-ftp');
 const mongodb = require('../util/mongodb');
@@ -12,6 +12,10 @@ const Journeys = require('../models/journeys');
 const Users = require('../models/users');
 
 const sync = require('../sync/sync');
+
+const debug = require('../util/debug');
+
+const watcher = require('../sync/watch');
 
 // Internal functions for sorting out everything
 function x(fn) {
@@ -24,16 +28,54 @@ function findSchedule(ftp) {
     return ftp.findSchedule();
 }
 
-function getSchedule(ftp, scheduleName) {
-    return ftp.getSchedule(scheduleName);
+function getSchedule(scheduleName, ftp) {
+    return ftp.getSchedule(scheduleName)
+        .then(schedule => dumpSchedule(schedule, scheduleName));
 }
 
-function parseSchedule(schedule) {
-    return scheduler.parse(schedule);
+function dumpSchedule(schedule, filename) {
+    return new Promise(function (resolve, reject) {
+        fs.writeFile(filename, schedule, function (err) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(filename);
+            }
+        });
+    });
 }
 
-function insertSchedule(schedule) {
-    return Journeys.insert(schedule.journeys);
+function logParseProgress(message) {
+    if (debug.on()) {
+        const memoryUsage = _.mapObject(process.memoryUsage(), val => filesize(val));
+        debug(`Memory usage (${message})`, memoryUsage);
+    } else {
+        console.log(message);
+    }
+}
+
+function parseSchedule(fileName) {
+
+    const batchSaveRequests = [];
+
+    let count = 0;
+
+    function saveBatch(batch) {
+        const insertRequest = Journeys.insert(batch)
+            .then(() => Promise.resolve())
+            .catch(err => {
+                console.log(err);
+                return Promise.reject(err);
+            });
+
+        batchSaveRequests.push(insertRequest);
+        count += batch.length;
+        logParseProgress(`Parsed ${count} journeys`);
+    }
+
+    return scheduler.parse(fileName, saveBatch)
+        .then(() => Promise.all(_.values(batchSaveRequests)))
+        .then(() => true);
 }
 
 function updateUsers() {
@@ -41,59 +83,28 @@ function updateUsers() {
 
     return Users.getAll().then(users => {
         return Promise.all(users.map(user => sync.populate(user)))
-            .then(() => console.log("Scheduler: Updated users"));
+            .then(() => console.log("Scheduler: Updated users"))
+            .then(() => watcher.update())
+            .then(() => console.log("Scheduler: Updated watched users"));
     });
 }
 
-function clearJourneys(mongo) {
-    console.log("Scheduler: Clearing journeys");
-    return mongo.collection('journeys').remove({});
-}
-
-function dump(schedule, filename) {
-    return new Promise(function (resolve, reject) {
-        fs.writeFile(filename, schedule, function (err) {
-            if (err) {
-                reject(err);
-            } else {
-                resolve();
-            }
-        });
-    });
+function clearJourneys(passthrough) {
+    console.log("Scheduler: Clearing existing journeys");
+    return mongodb.connect().then(mongo => mongo.collection('journeys').remove({}))
+        .then(() => passthrough);
 }
 
 function disconnect() {
     mongodb.disconnect();
     ftp.disconnect();
+    console.log("Scheduler: Disconnected");
+    process.exit(0);
 }
 
 function handleError(err) {
     console.error(err, err.stack);
     disconnect();
-}
-
-// Callable functions
-function insertFromFile(filename) {
-    mongodb.connect().then(() => {
-        return scheduler.load(filename)
-            .then(schedule => insertSchedule(schedule))
-            .then(disconnect);
-    }).catch(handleError);
-}
-
-function dumpSchedule(filename) {
-    ftp.connect().then((ftp) => {
-        return findSchedule(ftp)
-            .then(scheduleName => ftp.getSchedule(scheduleName))
-            .then(schedule => dump(schedule, filename))
-            .then(disconnect);
-    }).catch(handleError);
-}
-
-function clear() {
-    mongodb.connect().then((mongo) => {
-        return clearJourneys(mongo).then(disconnect);
-    }).catch(handleError);
 }
 
 function update() {
@@ -102,36 +113,16 @@ function update() {
     Promise.all([ftp.connect(), mongodb.connect()])
         .then(x((ftp) => {
             return findSchedule(ftp)
-                .then(getSchedule.bind(null, ftp))
-                .then(parseSchedule)
-                .then(insertSchedule)
+                .then(scheduleName => clearJourneys(scheduleName))
+                .then(scheduleName => getSchedule(scheduleName, ftp))
+                .then(fileName => parseSchedule(fileName))
                 .then(updateUsers)
                 .then(disconnect);
         }))
         .catch(handleError);
 }
 
-function doSync() {
-    updateUsers().then(disconnect)
-        .catch(handleError);
-}
-
-function logMemoryUsage(message, passthrough) {
-    const memoryUsage = _.mapObject(process.memoryUsage(), val => filesize(val));
-    
-    console.log(`Memory usage (${message})`, memoryUsage);
-    return passthrough;
-}
-
-function toXML(filename) {
-    logMemoryUsage('pre-load');
-    return scheduler.read(filename)
-        .then(file => logMemoryUsage('post-load', file))
-        .then(file => scheduler.toXML(file))
-        .then(() => logMemoryUsage('post-parse'))
-        .catch(handleError);
-}
-
+// Callable functions
 const args = process.argv.slice(2);
 let processed = false;
 
@@ -145,24 +136,62 @@ function getArgValue(arg, name) {
     return val;
 }
 
+function doSync() {
+    updateUsers()
+        .then(disconnect)
+        .catch(handleError);
+}
+
+function doWatch(userID) {
+    watcher.watch(userID)
+        .then(disconnect);
+}
+
 args.forEach((arg) => {
-    if (arg === '--clear') {
-        processed = true;
-        clear();
-    } else if (arg === '--sync') {
+    if (arg === '--sync') {
         processed = true;
         doSync();
-    } else if (arg.startsWith('--toXML')) {
+    } else if (arg.startsWith('--watch')) {
         processed = true;
-        toXML(getArgValue(arg, '--toXML'));
-    } else if (arg.startsWith("--file")) {
-        processed = true;
-        insertFromFile(getArgValue(arg, '--file'));
-    } else if (arg.startsWith("--dump")) {
-        processed = true;
-        dumpSchedule(getArgValue(arg, '--dump'));
+        doWatch(getArgValue(arg, '--watch'));
     }
 });
+
+/*
+const callable = {
+    function insertFromFile(filename) {
+        mongodb.connect().then(() => {
+            return scheduler.load(filename)
+                .then(schedule => insertSchedule(schedule))
+                .then(disconnect);
+        }).catch(handleError);
+    }
+
+    function dumpSchedule(filename) {
+        ftp.connect().then((ftp) => {
+            return findSchedule(ftp)
+                .then(scheduleName => ftp.getSchedule(scheduleName))
+                .then(schedule => dump(schedule, filename))
+                .then(disconnect);
+        }).catch(handleError);
+    }
+
+    function clear() {
+        mongodb.connect().then((mongo) => {
+            return clearJourneys(mongo).then(disconnect);
+        }).catch(handleError);
+    }
+
+    function doSync() {
+        updateUsers().then(disconnect)
+            .catch(handleError);
+    }
+
+    function parse(filename) {
+        parseSchedule(filename)
+            .catch(handleError);
+    }
+}*/
 
 if (!processed) {
     update();

@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/TeaSeaLancs/train-timeline#readme",
   "dependencies": {
+    "big-xml": "^0.7.0",
     "express": "^4.13.3",
     "filesize": "^3.1.5",
     "ftp": "^0.3.10",

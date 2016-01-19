@@ -1,6 +1,7 @@
 "use strict";
 
 const moment = require('moment');
+const _ = require('underscore');
 
 const Journeys = require('../models/journeys');
 const Users = require('../models/users');
@@ -8,6 +9,7 @@ const Users = require('../models/users');
 const timeline = require('../util/timeline');
 
 const analyser = require('./analysers');
+const watcher = require('./watch');
 
 function generateDate(time) {
     return moment(time, 'HH:mm').toDate();
@@ -15,28 +17,55 @@ function generateDate(time) {
 
 function analyseSection(section) {
     const analyserResults = analyser.analyse(section);
-    // TODO Some damn analysis
+    const currentStatus = section.status;
     
-    const analysis = {
-        changed: false,
-        from: null,
-        to: analyser.states.ok
+    const counts = _.countBy(analyserResults, 'state');
+    const results = _.reduce(counts, (biggest, count, status) => {
+        if (!biggest || count > biggest.count) {
+            biggest = {
+                count,
+                status
+            };
+        }
+        
+        return biggest;
+    }, 0);
+    
+    return {
+        changed: results.status !== currentStatus,
+        from: currentStatus,
+        to: results.status,
+        details: analyserResults
     };
-    
-    return analysis;
 }
 
 function analyse(user) {
-    return {
+    const analysis = {
         out: analyseSection(user.out),
         return: analyseSection(user.return)
     };
+    
+    if (watcher.isUserWatched(user._id)) {
+        console.log(`Sync: Analysis update for ${user._id}`);
+        const closestJourney = Journeys.chooseClosestUserJourney(user.out, user.return);
+        if (closestJourney === user.out) {
+            console.log("Out: ", JSON.stringify(analysis.out));
+        } else {
+        console.log("Return: ", JSON.stringify(analysis.return));
+        }
+    }
+    
+    user.out.status = analysis.out.to;
+    user.return.status = analysis.return.to;
+    
+    return analysis;
 }
 
 function reduce(journeys) {
     return journeys.reduce((journeys, journey) => {
         journeys[journey.uid] = {
             uid: journey.uid,
+            ssd: journey.ssd,
             predictedTime: journey.from.predictedTime,
             actualTime: journey.from.actualTime,
             delayed: journey.from.delayed
@@ -52,6 +81,9 @@ function shouldPushToday(user) {
 
 function pushToTimeline(user) {
     if (!shouldPushToday(user)) {
+        if (watcher.isUserWatched(user._id)) {
+            console.log(`Watched user ${user._id} does not travel today, not pushing to timeline`);
+        }
         return Promise.resolve();
     }
     
@@ -64,7 +96,7 @@ function pushToTimeline(user) {
 function generateUserJourney(from, to, date) {
     return Journeys.find(from, to, date)
         .then((journeys) => {
-            var creationDate = new Date();
+            const creationDate = new Date();
             journeys = reduce(journeys);
             return {
                 from,
@@ -115,13 +147,13 @@ function updateSection(section, journey) {
 }
 
 function actOnAnalysis(user, analysis) {
-    var updates = [];
+    const updates = [];
     if (analysis.out.changed) {
         updates.push(timeline.send(user, user.out, analysis.out.from));
     }
     
     if (analysis.return.changed) {
-        updates.push(timeline.send(user, user.in, analysis.in.from));
+        updates.push(timeline.send(user, user.return, analysis.return.from));
     }
     
     return Promise.all(updates);

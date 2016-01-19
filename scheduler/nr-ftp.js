@@ -6,8 +6,10 @@ const filesize = require('filesize');
 
 const config = require('../util/config');
 const Reporter = require('../util/reporter');
+const debug = require('../util/debug');
 
 let singleton = null;
+let singletonPromise = null;
 
 function scheduleFilter(file) {
     return file.type === '-' &&
@@ -25,7 +27,7 @@ Connection.prototype.findSchedule = function () {
             if (err) {
                 reject(err);
             } else {
-                var schedule = list.filter(scheduleFilter)[0];
+                const schedule = list.filter(scheduleFilter)[0];
                 if (!schedule) {
                     reject(new Error("No schedule exists on servers, this is a big problem!"));
                 } else {
@@ -84,14 +86,13 @@ Connection.prototype.getSchedule = function (scheduleName) {
 
 Connection.prototype.disconnect = function () {
     this.connection.end();
-    singleton = undefined;
 };
 
 function connect() {
-    if (singleton) {
-        return Promise.resolve(singleton);
+    if (singletonPromise) {
+        return singletonPromise;
     } else {
-        return new Promise(function (resolve, reject) {
+        singletonPromise = new Promise(function (resolve, reject) {
             const connection = new Client();
             connection.on('ready', () => {
                 singleton = new Connection(connection);
@@ -99,18 +100,23 @@ function connect() {
             });
             connection.on('error', (err) => reject(err));
 
+            debug("Connecting to FTP");
             connection.connect({
                 host: 'datafeeds.nationalrail.co.uk',
                 user: config.ftp.user,
                 password: config.ftp.password
             });
         });
+        return singletonPromise;
     }
 }
 
 function disconnect() {
     if (singleton) {
+        debug("Disconnecting from FTP");
         singleton.disconnect();
+        singleton = null;
+        singletonPromise = null;
     }
 }
 

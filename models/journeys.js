@@ -2,6 +2,7 @@
 
 const EventEmitter = require('events');
 const moment = require('moment');
+const _ = require('underscore');
 
 const mongodb = require('../util/mongodb');
 
@@ -46,11 +47,12 @@ function stripJourney(journey, from, to) {
         return {
             uid: journey.uid,
             trainID: journey.trainID,
+            ssd: journey.ssd,
             from: stops.from,
             to: stops.to
         };
     }
-    
+
     return null;
 }
 
@@ -60,7 +62,7 @@ function constructUserJourneys(results, from, to) {
         if (userJourney) {
             journeys.push(userJourney);
         }
-        
+
         return journeys;
     }, []);
 }
@@ -72,8 +74,8 @@ function queryForJourneys(from, to, around, db) {
 
     const mmt = moment(around);
 
-    const lowerBound = moment(mmt).subtract(15, 'minutes');
-    const upperBound = moment(mmt).add(45, 'minutes');
+    const lowerBound = moment(mmt).subtract(45, 'minutes');
+    const upperBound = moment(mmt).add(15, 'minutes');
 
     query[`stops.${from}`] = {
         $elemMatch: {
@@ -89,6 +91,7 @@ function queryForJourneys(from, to, around, db) {
 
     projection.uid = 1;
     projection.trainID = 1;
+    projection.ssd = 1;
     projection[`stops.${from}`] = 1;
     projection[`stops.${to}`] = 1;
 
@@ -116,10 +119,22 @@ function findByID(uid, ssd) {
         }));
 }
 
+// TODO Actually make this handle N-level objects. It's too much to think about at this time of day.
+function flatten(obj) {
+    return _.reduce(obj, (flattened, subObject, subKey) => {
+        return _.reduce(subObject, (flattened, val, key) => {
+            flattened[`${subKey}.${key}`] = val;
+            return flattened;
+        }, flattened);
+    }, {});
+}
+
 function update(uid, ssd, updates) {
-    
-    const updateObj = {$set: updates};
-    
+
+    const updateObj = {
+        $set: flatten(updates)
+    };
+
     return mongodb.connect()
         .then((db) => db.collection('journeys').findOneAndUpdate({
             uid, ssd
@@ -128,9 +143,31 @@ function update(uid, ssd, updates) {
         }))
         .then((result) => {
             if (result.value) {
-                emitter.emit('update', result.value);
+                emitter.emit('update', result.value, updates);
             }
         });
+}
+
+function chooseClosestUserJourney() {
+    const userJourneys = Array.prototype.slice.call(arguments, 0);
+    if (!userJourneys.length) {
+        return null;
+    }
+    const now = moment();
+    
+    const times = userJourneys.map(userJourney => {
+        return {
+            diff: Math.abs(now.diff(userJourney.date)),
+            userJourney
+        };
+    });
+    
+    return times.reduce((closest, userJourney) => {
+        if (userJourney.diff < closest.diff) {
+            closest = userJourney;
+        }
+        return closest;
+    }).userJourney;
 }
 
 function on(event, cb) {
@@ -140,8 +177,10 @@ function on(event, cb) {
 module.exports = {
     find,
     findByID,
+    chooseClosestUserJourney,
     stripJourney,
     insert,
     update,
-    on
+    on,
+    flatten
 };

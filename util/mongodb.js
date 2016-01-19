@@ -3,14 +3,18 @@
 const MongoClient = require("mongodb").MongoClient;
 const config = require("./config");
 
+const debug = require('../util/debug');
+
+let singletonPromise = null;
 let singleton = null;
 
 function connect() {
-    if (singleton) {
-        return Promise.resolve(singleton);
+    if (singletonPromise) {
+        return singletonPromise;
     } else {
-        return new Promise(function(resolve, reject) {
+        singletonPromise = new Promise(function(resolve, reject) {
             const mongoURL = config.mongolab.uri;
+            debug("MongoDB: Connecting to MongoDB");
             MongoClient.connect(mongoURL, function(err, db) {
                if (err) {
                    reject(err);
@@ -20,13 +24,16 @@ function connect() {
                }
             });
         });
+        return singletonPromise;
     }
 }
 
 function disconnect() {
     if (singleton) {
+        debug("MongoDB: Disconnecting from MongoDB");
         singleton.close();
-        singleton = null;
+        singletonPromise = null;
+        singletonPromise = null;
     }
 }
 

@@ -4,6 +4,7 @@ const Journeys = require('../../models/journeys');
 const Users = require('../../models/users');
 
 const sync = require('../../sync/sync');
+const watcher = require('../../sync/watch');
 
 const debug = require('../../util/debug');
 
@@ -16,21 +17,21 @@ function success(operation, journey) {
 }
 
 function noop(operation, journey) {
-    debug(`Journey: Nothing to be done for ${operation} on ${journey.uid}`);
+    const log = watcher.isJourneyWatched(journey.uid, journey.ssd) ? console.log : debug;
+    log(`Journey: Nothing to be done for ${operation} on ${journey.uid}`);
 }
 
-function updateUser(user, journey) {
-    if (!user) {
+function updateUsers(users, journey) {
+    if (!users || !users.length) {
         return Promise.resolve(false);
     }
-    if (user) {
-        return sync.update(user, journey);
-    }
+    
+    return Promise.all(users.map(user => sync.update(user, journey)));
 }
 
-Journeys.on('update', function(journey) {
-    Users.findForJourney(journey.uid)
-        .then((user) => updateUser(user, journey))
+Journeys.on('update', function(journey, updates) {
+    Users.findForJourney(journey.uid, journey.ssd)
+        .then((users) => updateUsers(users, journey))
         .then((updated) => updated ? success('update', journey) : noop('update', journey))
         .catch((err) => error('update', journey, err));
 });

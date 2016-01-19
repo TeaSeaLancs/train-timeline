@@ -15,11 +15,15 @@ function find(userID) {
     });
 }
 
-function findForJourney(uid) {
+function findForJourney(uid, ssd) {
     const outQuery = {}, returnQuery = {};
     outQuery[`out.journeys.${uid}`] = {$exists: true};
+    outQuery[`out.journeys.${uid}.ssd`] = ssd;
     returnQuery[`return.journeys.${uid}`] = {$exists: true};
-    return mongodb.connect().then(db => db.collection('users').findOne({$or: [outQuery,returnQuery]}));
+    returnQuery[`return.journeys.${uid}.ssd`] = ssd;
+    
+    const query = {$or: [outQuery,returnQuery]};
+    return mongodb.connect().then(db => db.collection('users').find(query).toArray());
 }
 
 function upsert(user, oldUser) {
