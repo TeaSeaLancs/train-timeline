@@ -63,7 +63,7 @@ function send(user, userJourney, oldStatus) {
             const pin = generatePin(userJourney, oldStatus);
             debug(`Timeline: Sending pin ${pin.id} to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
             debug(JSON.stringify(pin));
-            timeline.sendUserPin(user._id, pin, (err) => {
+            timeline.sendUserPin(user._id.toString(), pin, (err) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -84,7 +84,7 @@ function remove(user, userJourney) {
             // to delete it, even though only the ID is required
             const pin = generatePin(userJourney);
             debug(`Timeline: Removing pin ${pin.id} for ${user._id} for ${userJourney.from} - ${userJourney.to}`);
-            timeline.deleteUserPin(user._id, pin, (err) => {
+            timeline.deleteUserPin(user._id.toString(), pin, (err) => {
                 if (err) {
                     reject(err);
                 } else {
