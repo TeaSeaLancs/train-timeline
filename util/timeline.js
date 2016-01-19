@@ -32,7 +32,8 @@ function generatePin(userJourney, oldStatus) {
 
     const layout = _.extend(flavourText, {
         type: Timeline.Pin.LayoutType.GENERIC_PIN,
-        title: `Your ${timeOfDay(userJourney.date)} commute`
+        title: `Your ${timeOfDay(userJourney.date)} commute`,
+        lastUpdated: userJourney.updatedAt,
     });
 
     const pin = {
