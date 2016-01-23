@@ -1,5 +1,6 @@
 "use strict";
 
-module.exports = () => {
-    require('./stomp')();
+module.exports = (server, app) => {
+    require('./stomp').init(server, app);
+    require('./socketio').init(server, app);
 };

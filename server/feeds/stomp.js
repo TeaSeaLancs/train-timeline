@@ -143,7 +143,7 @@ function parseUpdate(update) {
 
 let tick = null;
 
-module.exports = () => {
+function init() {
     tick = new Date();
     Stomp.getMessages(message => {
         const xMessage = xmljs.parseXml(message);
@@ -160,4 +160,8 @@ module.exports = () => {
             });
         }
     }).catch(err => console.log("Stomp: Fatal error", err));
+}
+
+module.exports = {
+    init
 };

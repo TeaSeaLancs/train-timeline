@@ -1,15 +1,19 @@
 "use strict";
 
 const express = require('express');
+const http = require('http');
+
+const port = process.env.PORT || 5000;
 
 const app = express();
-app.set('port', (process.env.PORT || 5000));
+const server = http.createServer(app);
+
 app.use(express.static('web'));
 
-require('./listeners')();
+require('./listeners')(server, app);
 require('./feeds')();
 require('./routers')(app);
 
-app.listen(app.get('port'), function() {
-   console.log(`Server: Started server on ${app.get('port')}`); 
+server.listen(port, function() {
+   console.log(`Server: Started server on ${port}`); 
 });
