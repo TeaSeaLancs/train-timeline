@@ -147,6 +147,34 @@ function doWatch(userID) {
         .then(disconnect);
 }
 
+function doAddUser(params) {
+    params = params.split('&').reduce((params, param) => {
+        const split = param.split('=');
+        params[split[0]] = split[1];
+        return params;
+    }, {});
+
+    let watch = false;
+
+    if (params.watch) {
+        watch = true;
+        delete params.watch;
+    }
+
+    console.log("Creating user", params);
+    Users.upsert(Users.fromParams(params))
+        .then(user => {
+            console.log("Created user", user);
+            return sync.populate(user).then(() => user);
+        })
+        .then(user => {
+            if (watch) {
+                return watcher.watch(user._id);
+            }
+        })
+        .then(disconnect);
+}
+
 args.forEach((arg) => {
     if (arg === '--sync') {
         processed = true;
@@ -154,44 +182,11 @@ args.forEach((arg) => {
     } else if (arg.startsWith('--watch')) {
         processed = true;
         doWatch(getArgValue(arg, '--watch'));
+    } else if (arg.startsWith('--add')) {
+        processed = true;
+        doAddUser(getArgValue(arg, '--add'));
     }
 });
-
-/*
-const callable = {
-    function insertFromFile(filename) {
-        mongodb.connect().then(() => {
-            return scheduler.load(filename)
-                .then(schedule => insertSchedule(schedule))
-                .then(disconnect);
-        }).catch(handleError);
-    }
-
-    function dumpSchedule(filename) {
-        ftp.connect().then((ftp) => {
-            return findSchedule(ftp)
-                .then(scheduleName => ftp.getSchedule(scheduleName))
-                .then(schedule => dump(schedule, filename))
-                .then(disconnect);
-        }).catch(handleError);
-    }
-
-    function clear() {
-        mongodb.connect().then((mongo) => {
-            return clearJourneys(mongo).then(disconnect);
-        }).catch(handleError);
-    }
-
-    function doSync() {
-        updateUsers().then(disconnect)
-            .catch(handleError);
-    }
-
-    function parse(filename) {
-        parseSchedule(filename)
-            .catch(handleError);
-    }
-}*/
 
 if (!processed) {
     update();

@@ -2,14 +2,18 @@
 
 const moment = require('moment');
 const _ = require('underscore');
+const EventEmitter = require('events');
 
 const Journeys = require('../models/journeys');
 const Users = require('../models/users');
 
 const timeline = require('../util/timeline');
+const updater = require('../util/update');
 
 const analyser = require('./analysers');
 const watcher = require('./watch');
+
+const emitter = new EventEmitter();
 
 function generateDate(time) {
     return moment(time, 'HH:mm').toDate();
@@ -146,23 +150,52 @@ function updateSection(section, journey) {
     return false;
 }
 
+function checkUpdate(data) {
+    if (watcher.isUserwatched(data.userID)) {
+        console.log(`Executing queued update for watched user ${data.userID}`);
+    }
+    Users.find(data.userID)
+        .then(user => {
+            if (user) {
+                // Check the user's journey status now. If it's not the same as what it was before the analysis changed
+                // then notify the user of that change
+                if (user.out.status !== data.outState.from) {
+                    timeline.send(user, user.out);
+                }
+                if (user.return.status !== data.returnState.from) {
+                    timeline.send(user, user.return);
+                }
+            }
+        });
+}
+
+function queueUpdate(user, outState, returnState) {
+    const userID = user._id;
+    
+    if (watcher.isUserWatched(userID)) {
+        console.log(`Queueing timeline update for watched user ${userID}`);
+    }
+    
+    updater.queue(userID, {
+        userID,
+        outState,
+        returnState
+    }).then(data => checkUpdate(data));
+}
+
 function actOnAnalysis(user, analysis) {
-    const updates = [];
-    if (analysis.out.changed) {
-        updates.push(timeline.send(user, user.out, analysis.out.from));
+    if (analysis.out.changed || analysis.return.changed) {
+        queueUpdate(user, analysis.out, analysis.return);
     }
     
-    if (analysis.return.changed) {
-        updates.push(timeline.send(user, user.return, analysis.return.from));
-    }
-    
-    return Promise.all(updates);
+    return true;
 }
 
 // Updates a user with an altered journey, then recalculates the overall journeys and, if needed, updates their pin
 function update(user, journey) {
     if (updateSection(user.out, journey) || updateSection(user.return, journey)) {
         const analysis = analyse(user);
+        emitter.emit('analyse', user, analysis);
         // Trigger off the DB update and any pin pushing at the same time, then return true as we updated
         return Promise.all([Users.update(user), actOnAnalysis(user, analysis)])
             .then(() => true);
@@ -179,8 +212,13 @@ function cleanup(user) {
     ]);
 }
 
+function on(event, cb) {
+    return emitter.on(event, cb);
+}
+
 module.exports = {
     populate,
     cleanup,
-    update
+    update,
+    on
 };

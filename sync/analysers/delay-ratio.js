@@ -12,9 +12,9 @@ const delayMap = {
 };
 
 const TIME_BEFORE_TRAVEL = 45;
-const TIME_FACTOR = TIME_BEFORE_TRAVEL * 2;
+const TIME_FACTOR = TIME_BEFORE_TRAVEL * (5/2);
 
-const SEVERITY_FACTOR = 10;
+const SEVERITY_FACTOR = 5;
 
 module.exports = userJourney => {
     const now = moment();
@@ -23,11 +23,11 @@ module.exports = userJourney => {
     const stats = _.reduce(userJourney.journeys, (stats, journey) => {
         // We calculate a maximum delay factor by comparing this journey's predicted time to when the user wants to travel
         // We assume that stats start 45 minutes before the user wants to travel (TODO Centralise this).
-        // At 45 minutes to travel, the factor is 0.5. At 0 minutes onwards, it's 1.
+        // At 45 minutes to travel, the factor is 0.6. At 0 minutes onwards, it's 1.
         const timeUntilTravel = travelDate.diff(journey.predictedTime, 'minutes', true);
         const maxDelayFactor = Math.min(1 - (timeUntilTravel / TIME_FACTOR), 1);
         
-        // Then calculate the delay severity by looking at the difference between the actual time and predicted time. This reaches 1 at 10 minutes delay.
+        // Then calculate the delay severity by looking at the difference between the actual time and predicted time. This reaches 1 at 5 minutes delay.
         const delayTime = moment(journey.actualTime).diff(journey.predictedTime, 'minutes', true);
         let delaySeverity = Math.min(delayTime / SEVERITY_FACTOR, 1);
         
@@ -36,14 +36,16 @@ module.exports = userJourney => {
             delaySeverity = 1;
         }
         
-        // Journeys which take place before now (And before the date of travel) count half as much
         const hasGone = now.isAfter(journey.actualTime) && travelDate.isAfter(journey.actualTime);
-        if (hasGone) {
-            delaySeverity = delaySeverity / 2;
-        }
+        
         
         // And then calculate the delay factor by multiplying the two together.
-        const delayFactor = maxDelayFactor * delaySeverity;
+        let delayFactor = maxDelayFactor * delaySeverity;
+        
+        // Journeys which take place before now (And before the date of travel) count half as much
+        if (hasGone) {
+            delayFactor = delayFactor / 2;
+        }
         
         // Log it all into the stats and continue
         stats.delayFactor += delayFactor;
