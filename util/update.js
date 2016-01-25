@@ -15,7 +15,9 @@ function queue(id, data, time) {
     if (!updates.has(id)) {
         debug(`Queueing update for ${id} in ${time/1000} seconds`, data);
         updates.set(id, {
-            promise: pause(time).then(() => data)
+            promise: pause(time)
+                .then(() => updates.delete(id))
+                .then(() => data)
         });
     }
 
