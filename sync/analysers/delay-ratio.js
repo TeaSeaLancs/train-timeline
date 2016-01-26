@@ -28,7 +28,7 @@ module.exports = userJourney => {
         const maxDelayFactor = Math.min(1 - (timeUntilTravel / TIME_FACTOR), 1);
         
         // Then calculate the delay severity by looking at the difference between the actual time and predicted time. This reaches 1 at 5 minutes delay.
-        const delayTime = Math.min(moment(journey.actualTime).diff(journey.predictedTime, 'minutes', true), 0);
+        const delayTime = Math.max(moment(journey.actualTime).diff(journey.predictedTime, 'minutes', true), 0);
         let delaySeverity = Math.min(delayTime / SEVERITY_FACTOR, 1);
         
         // If this journey is marked as delayed, just assume the severity is 1 anyway.
