@@ -151,7 +151,7 @@ function updateSection(section, journey) {
 }
 
 function checkUpdate(data) {
-    if (watcher.isUserwatched(data.userID)) {
+    if (watcher.isUserWatched(data.userID)) {
         console.log(`Executing queued update for watched user ${data.userID}`);
     }
     Users.find(data.userID)
@@ -176,11 +176,12 @@ function queueUpdate(user, outState, returnState) {
         console.log(`Queueing timeline update for watched user ${userID}`);
     }
     
-    updater.queue(userID, {
+    return updater.queue(userID, {
         userID,
         outState,
         returnState
-    }).then(data => checkUpdate(data));
+    }).then(data => checkUpdate(data))
+    .catch(err => console.error(err, err.stack));
 }
 
 function actOnAnalysis(user, analysis) {
