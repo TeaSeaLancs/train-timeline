@@ -10,6 +10,9 @@ const pushPortNS = {
     ns3: 'http://www.thalesgroup.com/rtti/PushPort/Forecasts/v2'
 };
 
+const WAIT_TIME = 30 * 1000;
+const DEAD_TIME = WAIT_TIME*2;
+
 let singleton = null;
 
 function connect() {
@@ -42,17 +45,60 @@ function disconnect() {
     }
 }
 
+function subscribe(client, cb) {
+    client.subscribe(config.stomp.queue, (message) => {
+        zlib.gunzip(message.body, function (err, body) {
+            if (err) {
+                console.log("Stomp: ", err);
+            }
+
+            cb(body.toString("UTF-8"));
+        });
+    });
+}
+
+function tick(cb) {
+    return new Promise((resolve, reject) => {
+        function tock() {
+            if (cb()) {
+                console.log("Stomp: Tick");
+                return setTimeout(tock, WAIT_TIME);
+            }
+            reject();
+        }
+        tock();
+    });
+}
+
+function track(callback) {
+    let now = Date.now();
+    let then = now;
+    
+    tick(() => (now - then) < DEAD_TIME)
+        .catch((err) => {
+            if (err) {
+                console.error(err);
+            } else {
+                resurrect(callback);
+            }
+        });
+        
+    return function(message) {
+        then = now;
+        now = Date.now();
+        callback(message);
+    };
+}
+
+function resurrect(cb) {
+    console.log("Stomp: Oh he dead. Resurrecting!");
+    disconnect();
+    return getMessages(cb);
+}
+
 function getMessages(cb) {
     return connect().then((client) => {
-        client.subscribe(config.stomp.queue, (message) => {
-            zlib.gunzip(message.body, function (err, body) {
-                if (err) {
-                    console.log("Stomp: ", err);
-                }
-                
-                cb(body.toString("UTF-8"));
-            });
-        });
+        subscribe(client, track(cb));
     });
 }
 

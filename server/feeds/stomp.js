@@ -141,23 +141,12 @@ function parseUpdate(update) {
         });
 }
 
-let tick = null;
-
 module.exports = () => {
-    tick = new Date();
     Stomp.getMessages(message => {
         const xMessage = xmljs.parseXml(message);
         const xTS = xMessage.get('ns:uR/ns:TS', Stomp.pushPortNS);
         if (xTS) {
-            parseUpdate(xTS).then((result) => {
-                const now = new Date();
-                if (result) {
-                    tick = now;
-                } else if ((now.getTime() - tick.getTime()) > 5000) {
-                    tick = now;
-                    console.log("Stomp: Still alive");
-                }
-            });
+            parseUpdate(xTS);
         }
     }).catch(err => console.log("Stomp: Fatal error", err));
 };
