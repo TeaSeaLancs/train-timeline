@@ -71,10 +71,9 @@ function tick(cb) {
 }
 
 function track(callback) {
-    let now = Date.now();
-    let then = now;
+    let lastMessageTime = Date.now();
     
-    tick(() => (now - then) < DEAD_TIME)
+    tick(() => (Date.now() - lastMessageTime) < DEAD_TIME)
         .catch((err) => {
             if (err) {
                 console.error(err);
@@ -84,8 +83,7 @@ function track(callback) {
         });
         
     return function(message) {
-        then = now;
-        now = Date.now();
+        lastMessageTime = Date.now();
         callback(message);
     };
 }
