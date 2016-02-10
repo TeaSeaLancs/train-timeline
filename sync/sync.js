@@ -97,9 +97,21 @@ function pushToTimeline(user) {
     ]);
 }
 
+function findJourneys(from, to, date) {
+    var queries = from.reduce((queries, fromStop) => {
+       return to.reduce((queries, toStop) => {
+           queries.push(Journeys.find(fromStop, toStop ,date));
+           return queries;
+       }, queries);
+    }, []);
+    
+    return Promise.all(queries).then(results => [].concat(...results));
+}
+
 function generateUserJourney(from, to, date) {
-    return Journeys.find(from, to, date)
+    return findJourneys(from, to, date)
         .then((journeys) => {
+            console.log(journeys);
             const creationDate = new Date();
             journeys = reduce(journeys);
             return {
