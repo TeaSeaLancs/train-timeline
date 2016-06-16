@@ -69,8 +69,7 @@ function constructUserJourneys(results, from, to) {
 
 function queryForJourneys(from, to, around, db) {
     const query = {},
-        projection = {},
-        sort = {};
+        projection = {};
 
     const mmt = moment(around);
 
@@ -97,7 +96,6 @@ function queryForJourneys(from, to, around, db) {
 
     return db.collection('journeys')
         .find(query, projection)
-        .sort(sort)
         .toArray()
         .then(results => constructUserJourneys(results, from, to));
 }
