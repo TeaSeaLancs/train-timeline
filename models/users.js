@@ -72,8 +72,8 @@ function fromParams(params) {
     return {
         _id: params.userID,
         criteria: {
-            home: params.home,
-            work: params.work,
+            home: params.home.split(','),
+            work: params.work.split(','),
             outTime: params.out_time,
             returnTime: params.return_time,
             days: parseDays(params.days)

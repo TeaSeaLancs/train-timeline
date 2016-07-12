@@ -54,7 +54,9 @@ function generatePin(userJourney, oldStatus) {
 
 function send(user, userJourney, oldStatus) {
     if (config.environment === 'test') {
+        const pin = generatePin(userJourney, oldStatus);
         console.log(`Timeline: TEST Would have sent pin to ${user._id} for ${userJourney.from} - ${userJourney.to}`);
+        debug(pin);
         return Promise.resolve();
     }
     

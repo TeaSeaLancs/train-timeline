@@ -175,6 +175,16 @@ function doAddUser(params) {
         .then(disconnect);
 }
 
+function doDump() {
+    ftp.connect()
+        .then(ftp => {
+            return findSchedule(ftp)
+                .then(scheduleName => getSchedule(scheduleName, ftp))
+                .then(() => disconnect());
+        })
+        .catch(err => console.error(err));
+}
+
 args.forEach((arg) => {
     if (arg === '--sync') {
         processed = true;
@@ -185,6 +195,9 @@ args.forEach((arg) => {
     } else if (arg.startsWith('--add')) {
         processed = true;
         doAddUser(getArgValue(arg, '--add'));
+    } else if (arg.startsWith('--dump')) {
+        processed = true;
+        doDump();
     }
 });
 
