@@ -148,12 +148,18 @@ function populate(user) {
         .then((user) => pushToTimeline(user));
 }
 
+function changed(j1, j2) {
+    return j1.actualTime !== j2.actualTime || j1.delayed !== j2.delayed;
+}
+
 function updateSection(section, journey) {
     if (journey.uid in section.journeys) {
         const stripped = Journeys.stripJourney(journey, section.from, section.to);
         
-        if (section.journeys[journey.uid].actualTime !== stripped.from.actualTime) {
-            section.journeys[journey.uid].actualTime = stripped.from.actualTime;
+        const trainJourney = section.journeys[journey.uid];
+        if (changed(trainJourney, stripped.from)) {
+            trainJourney.actualTime = stripped.from.actualTime;
+            trainJourney.delayed = !!stripped.from.delayed;
             section.updatedAt = new Date();
             return true;
         }
